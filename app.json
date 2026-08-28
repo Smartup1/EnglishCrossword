@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "English Crossword",
+    "slug": "english-crossword",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "englishcrossword",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
