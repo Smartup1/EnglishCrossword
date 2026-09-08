@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_WORDS } from "../data/words";
 import { generateCrossword, isPuzzleComplete, isWordComplete } from "../game/crosswordGenerator";
 import { Cell, CrosswordWord, Direction, PlacedWord } from "../types/crossword";
+import { addProgress, loadProgress, PlayerProgress } from "../services/progressStorage";
 
 const XP_PER_WORD = 10;
 const XP_PER_PUZZLE = 100;
@@ -35,8 +36,29 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
   const [activeDirection, setActiveDirection] = useState<Direction>("across");
   const [completedWordIds, setCompletedWordIds] = useState<Set<string>>(new Set());
   const [learnedWord, setLearnedWord] = useState<PlacedWord | null>(null);
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
+
+  // Progress (XP/coins/level/words learned) is persisted across app restarts
+  // via AsyncStorage — see services/progressStorage.tsx (Fase 5/6 do roadmap).
+  const [progress, setProgress] = useState<PlayerProgress>({
+    xp: 0,
+    coins: 0,
+    level: 1,
+    wordsLearned: []
+  });
+  const progressRef = useRef(progress);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadProgress().then(loaded => {
+      if (!cancelled) setProgress(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const placedWords = crossword.placedWords;
 
@@ -112,13 +134,14 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
 
         if (activeWord && isWordComplete(next, activeWord) && !completedWordIds.has(activeWord.id)) {
           setCompletedWordIds(prev => new Set(prev).add(activeWord.id));
-          setXp(prev => prev + XP_PER_WORD);
-          setCoins(prev => prev + 5);
           setLearnedWord(activeWord);
 
-          if (isPuzzleComplete(next)) {
-            setXp(prev => prev + XP_PER_PUZZLE);
-          }
+          const puzzleWillBeComplete = isPuzzleComplete(next);
+          addProgress(progressRef.current, {
+            xp: XP_PER_WORD + (puzzleWillBeComplete ? XP_PER_PUZZLE : 0),
+            coins: 5,
+            newlyLearnedWordId: activeWord.id
+          }).then(setProgress);
         }
 
         return next;
@@ -151,7 +174,7 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
   const dismissLearnedWord = useCallback(() => setLearnedWord(null), []);
 
   const useHint = useCallback(() => {
-    if (!activeWord || coins < 20) return;
+    if (!activeWord || progress.coins < 20) return;
     const nextEmptyIndex = activeWord.answer
       .split("")
       .findIndex((letter, i) => {
@@ -165,18 +188,32 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     const col = activeWord.direction === "across" ? activeWord.col + nextEmptyIndex : activeWord.col;
     const letter = activeWord.answer[nextEmptyIndex];
 
-    setCoins(prev => prev - 20);
-    setGrid(current => {
-      const next = current.map((r, ri) =>
+    const wordWillComplete =
+      !completedWordIds.has(activeWord.id) &&
+      activeWord.answer
+        .split("")
+        .every((expected, i) => {
+          const r = activeWord.direction === "down" ? activeWord.row + i : activeWord.row;
+          const c = activeWord.direction === "across" ? activeWord.col + i : activeWord.col;
+          return (r === row && c === col) || grid[r][c].value === expected;
+        });
+
+    addProgress(progressRef.current, {
+      coins: -20,
+      xp: wordWillComplete ? XP_PER_WORD : 0,
+      newlyLearnedWordId: wordWillComplete ? activeWord.id : undefined
+    }).then(setProgress);
+
+    if (wordWillComplete) {
+      setCompletedWordIds(prev => new Set(prev).add(activeWord.id));
+    }
+
+    setGrid(current =>
+      current.map((r, ri) =>
         r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: letter } : cell))
-      );
-      if (isWordComplete(next, activeWord) && !completedWordIds.has(activeWord.id)) {
-        setCompletedWordIds(prev => new Set(prev).add(activeWord.id));
-        setXp(prev => prev + XP_PER_WORD);
-      }
-      return next;
-    });
-  }, [activeWord, coins, grid, completedWordIds]);
+      )
+    );
+  }, [activeWord, progress.coins, grid, completedWordIds]);
 
   return {
     grid,
@@ -187,8 +224,10 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     activeDirection,
     completedWordIds,
     learnedWord,
-    xp,
-    coins,
+    xp: progress.xp,
+    coins: progress.coins,
+    level: progress.level,
+    wordsLearnedCount: progress.wordsLearned.length,
     complete,
     selectCell,
     selectWord,

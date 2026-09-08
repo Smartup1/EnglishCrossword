@@ -36,7 +36,7 @@ export default function GameScreen() {
 
         <View style={styles.headerCenter}>
           <Text style={styles.level}>
-            LEVEL 1
+            LEVEL {game.level}
           </Text>
 
           <Text style={styles.xp}>

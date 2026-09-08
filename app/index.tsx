@@ -1,8 +1,29 @@
+import { useCallback, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+
+import { loadProgress, PlayerProgress } from "../services/progressStorage";
+
+const EMPTY_PROGRESS: PlayerProgress = { xp: 0, coins: 0, level: 1, wordsLearned: [] };
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [progress, setProgress] = useState<PlayerProgress>(EMPTY_PROGRESS);
+
+  // Re-reads progress every time this screen becomes active again, so XP/level
+  // earned in a puzzle show up here right after the player goes back.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      loadProgress().then(loaded => {
+        if (!cancelled) setProgress(loaded);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -14,14 +35,19 @@ export default function HomeScreen() {
         <Text style={styles.playText}>▶ PLAY</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondary}>
+      {/*
+        TODO (Fase 6 do roadmap): hoje isso abre o mesmo gerador aleatório do
+        botão PLAY. Um "daily challenge" de verdade precisa de um puzzle fixo
+        por dia (seed determinística pela data) + streak — ainda não implementado.
+      */}
+      <TouchableOpacity style={styles.secondary} onPress={() => router.push("/game")}>
         <Text style={styles.secondaryText}>📅 DAILY CHALLENGE</Text>
       </TouchableOpacity>
 
       <View style={styles.stats}>
-        <View><Text style={styles.statNumber}>1</Text><Text style={styles.statLabel}>LEVEL</Text></View>
-        <View><Text style={styles.statNumber}>0</Text><Text style={styles.statLabel}>WORDS</Text></View>
-        <View><Text style={styles.statNumber}>0</Text><Text style={styles.statLabel}>XP</Text></View>
+        <View><Text style={styles.statNumber}>{progress.level}</Text><Text style={styles.statLabel}>LEVEL</Text></View>
+        <View><Text style={styles.statNumber}>{progress.wordsLearned.length}</Text><Text style={styles.statLabel}>WORDS</Text></View>
+        <View><Text style={styles.statNumber}>{progress.xp}</Text><Text style={styles.statLabel}>XP</Text></View>
       </View>
     </View>
   );
