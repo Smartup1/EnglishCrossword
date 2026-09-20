@@ -2,7 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_WORDS } from "../data/words";
 import { generateCrossword, isPuzzleComplete, isWordComplete } from "../game/crosswordGenerator";
 import { Cell, CrosswordWord, Direction, PlacedWord } from "../types/crossword";
-import { levelForXp, loadProgress, PlayerProgress, saveProgress } from "../services/progressStorage";
+import {
+  emptyProgress,
+  levelForXp,
+  loadProgress,
+  PlayerProgress,
+  saveProgress
+} from "../services/progressStorage";
+import {
+  DAILY_GOAL_COINS,
+  DAILY_GOAL_WORDS,
+  dailyWordsFor,
+  goalDoneToday,
+  registerWordCompleted,
+  streakFor,
+  todayKey
+} from "../services/dailyProgress";
 
 // ---------- Economia do jogo (ajuste aqui) ----------
 const XP_PER_WORD = 10;
@@ -77,13 +92,11 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
   }, []);
 
   // Progresso (XP/moedas/nível/palavras) salvo no aparelho via AsyncStorage.
-  const [progress, setProgress] = useState<PlayerProgress>({
-    xp: 0,
-    coins: 0,
-    level: 1,
-    wordsLearned: []
-  });
+  // Começa zerado (sem presente) até o progresso salvo carregar.
+  const [progress, setProgress] = useState<PlayerProgress>(emptyProgress);
   const progressRef = useRef(progress);
+  // Sobe 1 a cada vez que o jogador cumpre a meta do dia (a tela comemora).
+  const [goalEvent, setGoalEvent] = useState(0);
 
   /** Aplica ganhos/gastos NA HORA (síncrono) e salva em segundo plano. */
   const applyProgress = useCallback((delta: ProgressDelta) => {
@@ -93,15 +106,26 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
         ? [...current.wordsLearned, delta.newlyLearnedWordId]
         : current.wordsLearned;
     const xp = current.xp + (delta.xp ?? 0);
-    const next: PlayerProgress = {
+    let next: PlayerProgress = {
+      ...current,
       xp,
       coins: Math.max(0, current.coins + (delta.coins ?? 0)),
       level: levelForXp(xp),
       wordsLearned
     };
+
+    // Cada palavra concluída conta para a meta do dia e para a sequência.
+    let goalReached = false;
+    if (delta.newlyLearnedWordId !== undefined) {
+      const result = registerWordCompleted(next, todayKey());
+      next = result.progress;
+      goalReached = result.goalReached;
+    }
+
     progressRef.current = next;
     setProgress(next);
     void saveProgress(next);
+    if (goalReached) setGoalEvent(n => n + 1);
   }, []);
 
   useEffect(() => {
@@ -294,6 +318,8 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
 
   const canReveal = !complete && progress.coins >= REVEAL_COST;
 
+  const today = todayKey();
+
   return {
     grid,
     words: placedWords,
@@ -316,6 +342,14 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     revealCost: REVEAL_COST,
     canReveal,
     lettersLeft,
-    dismissLearnedWord
+    dismissLearnedWord,
+    // Sequência diária e meta do dia
+    streak: streakFor(progress, today),
+    bestStreak: progress.bestStreak,
+    dailyWords: dailyWordsFor(progress, today),
+    dailyGoal: DAILY_GOAL_WORDS,
+    dailyGoalCoins: DAILY_GOAL_COINS,
+    goalDone: goalDoneToday(progress, today),
+    goalEvent
   };
 }

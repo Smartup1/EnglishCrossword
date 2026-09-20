@@ -1,6 +1,7 @@
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlacedWord } from "../types/crossword";
 import Confetti from "./Confetti";
+import { speakEnglish, stopSpeaking } from "../services/speech";
 
 type Props = {
   word: PlacedWord | null;
@@ -23,15 +24,32 @@ const CATEGORY_PT: Record<string, string> = {
 export default function WordLearnedCard({ word, onDismiss }: Props) {
   if (!word) return null;
 
+  // A pronúncia é sempre da palavra em INGLÊS, qualquer que seja a direção do jogo.
+  const english = word.english ?? word.answer;
+
+  const dismiss = () => {
+    stopSpeaking();
+    onDismiss();
+  };
+
   return (
-    <Modal transparent animationType="fade" visible={!!word} onRequestClose={onDismiss}>
+    <Modal transparent animationType="fade" visible={!!word} onRequestClose={dismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.badge}>✓ PALAVRA COMPLETA +10 XP</Text>
           {/* As duas línguas, sempre na mesma ordem, não importa a direção do jogo */}
-          <Text style={styles.answer}>
-            🇺🇸 {(word.english ?? word.answer).toUpperCase()}
-          </Text>
+          <View style={styles.wordRow}>
+            <Text style={styles.answer}>🇺🇸 {english.toUpperCase()}</Text>
+            <TouchableOpacity
+              accessibilityLabel="Ouvir pronúncia"
+              activeOpacity={0.7}
+              hitSlop={10}
+              style={styles.speakButton}
+              onPress={() => speakEnglish(english)}
+            >
+              <Text style={styles.speakIcon}>🔊</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.translation}>
             🇧🇷 {word.portuguese ?? word.translation}
           </Text>
@@ -40,12 +58,22 @@ export default function WordLearnedCard({ word, onDismiss }: Props) {
 
           {word.example && (
             <View style={styles.exampleBox}>
-              <Text style={styles.exampleLabel}>EXEMPLO</Text>
+              <View style={styles.exampleHeader}>
+                <Text style={styles.exampleLabel}>EXEMPLO</Text>
+                <TouchableOpacity
+                  accessibilityLabel="Ouvir a frase"
+                  activeOpacity={0.7}
+                  hitSlop={10}
+                  onPress={() => speakEnglish(word.example ?? "")}
+                >
+                  <Text style={styles.speakIconSmall}>🔊</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.example}>{word.example}</Text>
             </View>
           )}
 
-          <TouchableOpacity style={styles.button} onPress={onDismiss}>
+          <TouchableOpacity style={styles.button} onPress={dismiss}>
             <Text style={styles.buttonText}>CONTINUAR ▶</Text>
           </TouchableOpacity>
         </View>
@@ -80,7 +108,23 @@ const styles = StyleSheet.create({
     gap: 6
   },
   badge: { color: "#22c55e", fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
+  wordRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   answer: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 1 },
+  speakButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#26324a",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  speakIcon: { fontSize: 20 },
+  speakIconSmall: { fontSize: 18 },
+  exampleHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
   translation: { color: "#facc15", fontSize: 18, fontWeight: "700", marginTop: 2 },
   pronunciation: { color: "#94a3b8", fontSize: 14, marginTop: 2 },
   category: { color: "#7dd3fc", fontSize: 12, fontWeight: "700", marginTop: 6 },

@@ -8,19 +8,47 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "englishCrossword:progress";
 
+/** Moedas de presente para quem abre o jogo pela primeira vez. */
+export const STARTER_COINS = 15;
+
 export type PlayerProgress = {
   xp: number;
   coins: number;
   level: number;
   wordsLearned: string[]; // word ids already completed at least once
+
+  // ---- Sequência diária e meta do dia ----
+  /** Dias seguidos em que a meta do dia foi cumprida. */
+  streak: number;
+  /** Maior sequência que o jogador já teve. */
+  bestStreak: number;
+  /** Último dia (AAAA-MM-DD, horário do aparelho) em que a meta foi cumprida. */
+  lastGoalDate: string | null;
+  /** Dia a que `dailyWords` se refere. */
+  dailyDate: string | null;
+  /** Palavras concluídas em `dailyDate`. */
+  dailyWords: number;
 };
 
-const DEFAULT_PROGRESS: PlayerProgress = {
-  xp: 0,
-  coins: 0,
-  level: 1,
-  wordsLearned: [],
-};
+/** Perfil zerado, sem presente (usado enquanto carrega e em dados corrompidos). */
+export function emptyProgress(): PlayerProgress {
+  return {
+    xp: 0,
+    coins: 0,
+    level: 1,
+    wordsLearned: [],
+    streak: 0,
+    bestStreak: 0,
+    lastGoalDate: null,
+    dailyDate: null,
+    dailyWords: 0,
+  };
+}
+
+/** Perfil de quem nunca jogou: começa com moedas de presente. */
+function newPlayerProgress(): PlayerProgress {
+  return { ...emptyProgress(), coins: STARTER_COINS };
+}
 
 /** XP needed to go from `level` to `level + 1`. Simple linear curve for now. */
 const XP_PER_LEVEL = 200;
@@ -29,21 +57,34 @@ export function levelForXp(xp: number): number {
   return Math.floor(xp / XP_PER_LEVEL) + 1;
 }
 
+const num = (value: unknown, fallback: number) =>
+  typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const dateKey = (value: unknown) =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+
 export async function loadProgress(): Promise<PlayerProgress> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PROGRESS;
+    // Nunca jogou: ganha as moedas de presente. Quem já tem dados salvos
+    // (mesmo de versões antigas do app) mantém o saldo que tinha.
+    if (!raw) return newPlayerProgress();
     const parsed = JSON.parse(raw);
     return {
-      xp: typeof parsed.xp === "number" ? parsed.xp : 0,
-      coins: typeof parsed.coins === "number" ? parsed.coins : 0,
-      level: typeof parsed.level === "number" ? parsed.level : 1,
+      xp: num(parsed.xp, 0),
+      coins: num(parsed.coins, 0),
+      level: num(parsed.level, 1),
       wordsLearned: Array.isArray(parsed.wordsLearned) ? parsed.wordsLearned : [],
+      streak: num(parsed.streak, 0),
+      bestStreak: num(parsed.bestStreak, 0),
+      lastGoalDate: dateKey(parsed.lastGoalDate),
+      dailyDate: dateKey(parsed.dailyDate),
+      dailyWords: num(parsed.dailyWords, 0),
     };
   } catch {
     // Corrupted or unavailable storage: fall back to a fresh profile
-    // instead of crashing the app.
-    return DEFAULT_PROGRESS;
+    // instead of crashing the app (sem presente, para não dar moeda de graça).
+    return emptyProgress();
   }
 }
 
@@ -68,6 +109,7 @@ export async function addProgress(
   const xp = current.xp + (delta.xp ?? 0);
 
   const next: PlayerProgress = {
+    ...current,
     xp,
     coins: current.coins + (delta.coins ?? 0),
     level: levelForXp(xp),

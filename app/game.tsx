@@ -14,12 +14,13 @@ import CrosswordGrid from "../components/CrosswordGrid";
 import ClueList from "../components/ClueList";
 import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
 import Confetti from "../components/Confetti";
-import LevelUpToast from "../components/LevelUpToast";
+import AchievementToast, { Toast } from "../components/AchievementToast";
 import WordLearnedCard from "../components/WordLearnedCard";
 import { useCrosswordGame } from "../hooks/useCrosswordGame";
 import { PlacedWord } from "../types/crossword";
 import { ALL_WORDS } from "../data/words";
 import { parseMode, prepareWords } from "../game/wordModes";
+import { speakEnglish } from "../services/speech";
 
 export default function GameScreen() {
   // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
@@ -86,8 +87,17 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
   // ---------- CELEBRAÇÕES ----------
   const [finishBurst, setFinishBurst] = useState(0); // puzzle completo
   const [levelBurst, setLevelBurst] = useState(0); // subiu de nível
-  const [levelToast, setLevelToast] = useState<number | null>(null);
-  const [pendingLevel, setPendingLevel] = useState<number | null>(null);
+
+  // Avisos (nível, meta do dia...) entram numa fila e só aparecem depois que
+  // o card da palavra fecha, porque o Modal fica por cima da tela.
+  const [pendingToasts, setPendingToasts] = useState<Toast[]>([]);
+  const [toastQueue, setToastQueue] = useState<Toast[]>([]);
+  const toastCounter = useRef(0);
+  const notify = useCallback((title: string, subtitle: string) => {
+    toastCounter.current += 1;
+    const toast: Toast = { id: toastCounter.current, title, subtitle };
+    setPendingToasts(current => [...current, toast]);
+  }, []);
 
   // Puzzle completo: espera o card da última palavra fechar (o Modal fica
   // por cima da tela) e então solta o confete grande.
@@ -109,20 +119,30 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
     }
     if (game.level > levelBaseline.current) {
       levelBaseline.current = game.level;
-      setPendingLevel(game.level);
+      notify("🎉 SUBIU DE NÍVEL!", `Você chegou ao nível ${game.level}`);
     }
   }, [game.level, game.completedWordIds.size]);
 
-  // O aviso de nível só aparece depois que o card da palavra fecha.
+  // Meta do dia cumprida: aviso + confete.
   useEffect(() => {
-    if (pendingLevel !== null && !game.learnedWord) {
-      setLevelToast(pendingLevel);
-      setLevelBurst(n => n + 1);
-      setPendingLevel(null);
-    }
-  }, [pendingLevel, game.learnedWord]);
+    if (game.goalEvent === 0) return;
+    const dias = game.streak === 1 ? "dia" : "dias";
+    notify(
+      "🔥 META DO DIA CUMPRIDA!",
+      `Sequência: ${game.streak} ${dias}  ·  +${game.dailyGoalCoins} 🪙`
+    );
+  }, [game.goalEvent]);
 
-  const clearLevelToast = useCallback(() => setLevelToast(null), []);
+  // Libera os avisos guardados quando o card da palavra não está na tela.
+  useEffect(() => {
+    if (pendingToasts.length > 0 && !game.learnedWord) {
+      setToastQueue(queue => [...queue, ...pendingToasts]);
+      setPendingToasts([]);
+      setLevelBurst(n => n + 1);
+    }
+  }, [pendingToasts, game.learnedWord]);
+
+  const nextToast = useCallback(() => setToastQueue(queue => queue.slice(1)), []);
 
   // Ao completar, volta ao topo para mostrar o cartão de parabéns.
   const scrollRef = useRef<ScrollView>(null);
@@ -151,6 +171,14 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
             ⭐ {game.xp} XP
             {"  ·  "}
             🪙 {game.coins}
+          </Text>
+
+          <Text style={styles.daily}>
+            🔥 {game.streak}
+            {"  ·  "}
+            {game.goalDone
+              ? "✅ meta do dia"
+              : `🎯 ${Math.min(game.dailyWords, game.dailyGoal)}/${game.dailyGoal} hoje`}
           </Text>
         </View>
 
@@ -214,9 +242,24 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
               </Text>
             </View>
 
-            <Text style={styles.activeClueText}>
-              {game.activeWord.clue}
-            </Text>
+            <View style={styles.activeClueRow}>
+              <Text style={[styles.activeClueText, styles.activeClueTextFlex]}>
+                {game.activeWord.clue}
+              </Text>
+
+              {/* Só quando a pista é em inglês: ouvir não entrega a resposta. */}
+              {game.activeWord.clueLang === "en" && (
+                <TouchableOpacity
+                  accessibilityLabel="Ouvir pronúncia"
+                  activeOpacity={0.7}
+                  hitSlop={10}
+                  style={styles.speakButton}
+                  onPress={() => speakEnglish(game.activeWord?.clue ?? "")}
+                >
+                  <Text style={styles.speakIcon}>🔊</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
 
@@ -315,7 +358,7 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
         count={40}
         origins={[{ x: 0.5, y: 0.12, aim: 90, spread: 140 }]}
       />
-      <LevelUpToast level={levelToast} onDone={clearLevelToast} />
+      <AchievementToast toast={toastQueue[0] ?? null} onDone={nextToast} />
     </View>
   );
 }
@@ -447,6 +490,36 @@ const styles = StyleSheet.create({
     color: "#64748b",
     fontSize: 11,
     fontWeight: "700"
+  },
+
+  daily: {
+    color: "#fb923c",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
+  activeClueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+
+  activeClueTextFlex: {
+    flex: 1
+  },
+
+  speakButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#26324a",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  speakIcon: {
+    fontSize: 19
   },
 
   activeClueText: {
