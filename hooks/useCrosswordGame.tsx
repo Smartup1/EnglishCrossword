@@ -215,6 +215,70 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     );
   }, [activeWord, progress.coins, grid, completedWordIds]);
 
+  /**
+   * Botão "revelar letra": grátis, revela UMA letra por toque.
+   * Começa pela palavra selecionada; quando ela fica pronta, segue para a
+   * próxima palavra incompleta, até o puzzle inteiro ficar preenchido.
+   * Palavras terminadas com ajuda contam como aprendidas, mas não dão XP/moedas.
+   */
+  const revealNext = useCallback(() => {
+    if (complete) return;
+
+    const target =
+      activeWord && !isWordComplete(grid, activeWord)
+        ? activeWord
+        : placedWords.find(word => !isWordComplete(grid, word));
+    if (!target) return;
+
+    const index = target.answer.split("").findIndex((letter, i) => {
+      const r = target.direction === "down" ? target.row + i : target.row;
+      const c = target.direction === "across" ? target.col + i : target.col;
+      return grid[r][c].value !== letter;
+    });
+    if (index === -1) return;
+
+    const row = target.direction === "down" ? target.row + index : target.row;
+    const col = target.direction === "across" ? target.col + index : target.col;
+    const letter = target.answer[index];
+
+    const next = grid.map((r, ri) =>
+      r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: letter } : cell))
+    );
+    setGrid(next);
+    setActiveDirection(target.direction);
+    setSelectedCell({ row, col });
+
+    // A letra revelada pode terminar a palavra atual e/ou a que a cruza.
+    const newlyDone = placedWords.filter(
+      word => !completedWordIds.has(word.id) && isWordComplete(next, word)
+    );
+    if (newlyDone.length > 0) {
+      setCompletedWordIds(prev => {
+        const updated = new Set(prev);
+        newlyDone.forEach(word => updated.add(word.id));
+        return updated;
+      });
+
+      (async () => {
+        let current = progressRef.current;
+        for (const word of newlyDone) {
+          current = await addProgress(current, { newlyLearnedWordId: word.id });
+        }
+        setProgress(current);
+      })();
+    }
+  }, [complete, activeWord, grid, placedWords, completedWordIds]);
+
+  const lettersLeft = useMemo(
+    () =>
+      grid.reduce(
+        (total, row) =>
+          total + row.filter(cell => cell.letter !== null && cell.value !== cell.letter).length,
+        0
+      ),
+    [grid]
+  );
+
   return {
     grid,
     words: placedWords,
@@ -234,6 +298,8 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     typeLetter,
     erase,
     useHint,
+    revealNext,
+    lettersLeft,
     dismissLearnedWord
   };
 }

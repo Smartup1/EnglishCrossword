@@ -176,6 +176,23 @@ export default function GameScreen() {
           />
         </View>
 
+        {/* REVEAL BUTTON */}
+        {!game.complete && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.revealButton}
+            onPress={game.revealNext}
+          >
+            <Text style={styles.revealText}>
+              💡 REVEAL NEXT LETTER
+            </Text>
+
+            <Text style={styles.revealCount}>
+              {game.lettersLeft} left
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* CLUES */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
@@ -350,6 +367,33 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     marginBottom: 20
+  },
+
+  revealButton: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#182033",
+    borderWidth: 1,
+    borderColor: "#facc15",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20
+  },
+
+  revealText: {
+    color: "#facc15",
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 0.5
+  },
+
+  revealCount: {
+    color: "#94a3b8",
+    fontWeight: "800",
+    fontSize: 12
   },
 
   section: {
