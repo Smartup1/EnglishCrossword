@@ -13,6 +13,8 @@ import { useRouter } from "expo-router";
 import CrosswordGrid from "../components/CrosswordGrid";
 import ClueList from "../components/ClueList";
 import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
+import Confetti from "../components/Confetti";
+import LevelUpToast from "../components/LevelUpToast";
 import WordLearnedCard from "../components/WordLearnedCard";
 import { useCrosswordGame } from "../hooks/useCrosswordGame";
 import { PlacedWord } from "../types/crossword";
@@ -69,6 +71,47 @@ export default function GameScreen() {
     // O Modal tira o foco do campo; devolve depois que ele fecha.
     setTimeout(openKeyboard, 150);
   }, [dismissLearnedWord, openKeyboard]);
+
+  // ---------- CELEBRAÇÕES ----------
+  const [finishBurst, setFinishBurst] = useState(0); // puzzle completo
+  const [levelBurst, setLevelBurst] = useState(0); // subiu de nível
+  const [levelToast, setLevelToast] = useState<number | null>(null);
+  const [pendingLevel, setPendingLevel] = useState<number | null>(null);
+
+  // Puzzle completo: espera o card da última palavra fechar (o Modal fica
+  // por cima da tela) e então solta o confete grande.
+  const celebratedPuzzle = useRef(false);
+  useEffect(() => {
+    if (game.complete && !game.learnedWord && !celebratedPuzzle.current) {
+      celebratedPuzzle.current = true;
+      setFinishBurst(n => n + 1);
+    }
+  }, [game.complete, game.learnedWord]);
+
+  // Subiu de nível. Enquanto nenhuma palavra foi concluída, só guardamos o
+  // nível carregado do aparelho (evita "level up" falso ao abrir o app).
+  const levelBaseline = useRef(game.level);
+  useEffect(() => {
+    if (game.completedWordIds.size === 0) {
+      levelBaseline.current = game.level;
+      return;
+    }
+    if (game.level > levelBaseline.current) {
+      levelBaseline.current = game.level;
+      setPendingLevel(game.level);
+    }
+  }, [game.level, game.completedWordIds.size]);
+
+  // O aviso de nível só aparece depois que o card da palavra fecha.
+  useEffect(() => {
+    if (pendingLevel !== null && !game.learnedWord) {
+      setLevelToast(pendingLevel);
+      setLevelBurst(n => n + 1);
+      setPendingLevel(null);
+    }
+  }, [pendingLevel, game.learnedWord]);
+
+  const clearLevelToast = useCallback(() => setLevelToast(null), []);
 
   const hintDisabled =
     game.complete ||
@@ -223,6 +266,17 @@ export default function GameScreen() {
         word={game.learnedWord}
         onDismiss={handleDismissLearned}
       />
+
+      {/* CONFETES E AVISOS (por cima de tudo, não bloqueiam toques) */}
+      <Confetti burstKey={finishBurst} mode="burst" count={70} />
+      <Confetti burstKey={finishBurst} mode="rain" count={60} />
+      <Confetti
+        burstKey={levelBurst}
+        mode="burst"
+        count={40}
+        origins={[{ x: 0.5, y: 0.12, aim: 90, spread: 140 }]}
+      />
+      <LevelUpToast level={levelToast} onDone={clearLevelToast} />
     </View>
   );
 }

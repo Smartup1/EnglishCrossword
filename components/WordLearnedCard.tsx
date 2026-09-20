@@ -1,5 +1,6 @@
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlacedWord } from "../types/crossword";
+import Confetti from "./Confetti";
 
 type Props = {
   word: PlacedWord | null;
@@ -31,6 +32,14 @@ export default function WordLearnedCard({ word, onDismiss }: Props) {
             <Text style={styles.buttonText}>CONTINUE ▶</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Confete dentro do Modal, senão ele ficaria escondido atrás dele */}
+        <Confetti
+          burstKey={1}
+          mode="burst"
+          count={45}
+          origins={[{ x: 0.5, y: 0.5, aim: -90, spread: 360 }]}
+        />
       </View>
     </Modal>
   );
