@@ -2,12 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_WORDS } from "../data/words";
 import { generateCrossword, isPuzzleComplete, isWordComplete } from "../game/crosswordGenerator";
 import { Cell, CrosswordWord, Direction, PlacedWord } from "../types/crossword";
-import { addProgress, loadProgress, PlayerProgress } from "../services/progressStorage";
+import { levelForXp, loadProgress, PlayerProgress, saveProgress } from "../services/progressStorage";
 
+// ---------- Economia do jogo (ajuste aqui) ----------
 const XP_PER_WORD = 10;
 const XP_PER_PUZZLE = 100;
+const COINS_PER_WORD = 5;
+const COINS_PER_PUZZLE = 20;
+/** Moedas gastas a cada letra revelada pelo botão de dica. */
+export const REVEAL_COST = 5;
+
+// ---------- Tamanho máximo da grade ----------
+// As células têm 34px e a tela do celular comporta ~9 colunas.
+export const MAX_GRID_COLS = 9;
+export const MAX_GRID_ROWS = 13;
 
 type SelectedCell = { row: number; col: number };
+
+type ProgressDelta = { xp?: number; coins?: number; newlyLearnedWordId?: string };
 
 function cloneGrid(grid: Cell[][]): Cell[][] {
   return grid.map(row => row.map(cell => ({ ...cell })));
@@ -29,7 +41,17 @@ function indexInWord(word: PlacedWord, row: number, col: number): number {
 }
 
 export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 6) {
-  const crossword = useMemo(() => generateCrossword(words, { maxWords }), [words, maxWords]);
+  // Cada vez que a tela do jogo abre, sorteia palavras e cruzamentos novos.
+  const crossword = useMemo(
+    () =>
+      generateCrossword(words, {
+        maxWords,
+        random: true,
+        maxCols: MAX_GRID_COLS,
+        maxRows: MAX_GRID_ROWS
+      }),
+    [words, maxWords]
+  );
 
   const [grid, setGrid] = useState<Cell[][]>(() => cloneGrid(crossword.grid));
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
@@ -37,8 +59,24 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
   const [completedWordIds, setCompletedWordIds] = useState<Set<string>>(new Set());
   const [learnedWord, setLearnedWord] = useState<PlacedWord | null>(null);
 
-  // Progress (XP/coins/level/words learned) is persisted across app restarts
-  // via AsyncStorage — see services/progressStorage.tsx (Fase 5/6 do roadmap).
+  // Refs espelham o estado de forma SÍNCRONA. Assim dois toques rápidos
+  // (ex.: no botão de dica) nunca enxergam um saldo/grade desatualizado.
+  const gridRef = useRef(grid);
+  const completedRef = useRef(completedWordIds);
+
+  const commitGrid = useCallback((next: Cell[][]) => {
+    gridRef.current = next;
+    setGrid(next);
+  }, []);
+
+  const markCompleted = useCallback((ids: string[]) => {
+    const updated = new Set(completedRef.current);
+    ids.forEach(id => updated.add(id));
+    completedRef.current = updated;
+    setCompletedWordIds(updated);
+  }, []);
+
+  // Progresso (XP/moedas/nível/palavras) salvo no aparelho via AsyncStorage.
   const [progress, setProgress] = useState<PlayerProgress>({
     xp: 0,
     coins: 0,
@@ -46,14 +84,32 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     wordsLearned: []
   });
   const progressRef = useRef(progress);
-  useEffect(() => {
-    progressRef.current = progress;
-  }, [progress]);
+
+  /** Aplica ganhos/gastos NA HORA (síncrono) e salva em segundo plano. */
+  const applyProgress = useCallback((delta: ProgressDelta) => {
+    const current = progressRef.current;
+    const wordsLearned =
+      delta.newlyLearnedWordId && !current.wordsLearned.includes(delta.newlyLearnedWordId)
+        ? [...current.wordsLearned, delta.newlyLearnedWordId]
+        : current.wordsLearned;
+    const xp = current.xp + (delta.xp ?? 0);
+    const next: PlayerProgress = {
+      xp,
+      coins: Math.max(0, current.coins + (delta.coins ?? 0)),
+      level: levelForXp(xp),
+      wordsLearned
+    };
+    progressRef.current = next;
+    setProgress(next);
+    void saveProgress(next);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     loadProgress().then(loaded => {
-      if (!cancelled) setProgress(loaded);
+      if (cancelled) return;
+      progressRef.current = loaded;
+      setProgress(loaded);
     });
     return () => {
       cancelled = true;
@@ -84,7 +140,7 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
 
   const selectCell = useCallback(
     (row: number, col: number) => {
-      if (!grid[row]?.[col]?.letter) return;
+      if (!gridRef.current[row]?.[col]?.letter) return;
 
       const candidates = wordsAtCell(placedWords, row, col);
       if (candidates.length === 0) return;
@@ -92,7 +148,7 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
       const tappingSameCell = selectedCell?.row === row && selectedCell?.col === col;
 
       if (tappingSameCell && candidates.length > 1) {
-        // Toggle between across/down when the cell belongs to two words.
+        // Alterna entre horizontal/vertical quando a célula pertence a duas palavras.
         setActiveDirection(current => (current === "across" ? "down" : "across"));
         return;
       }
@@ -101,7 +157,7 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
       setActiveDirection((preferred ?? candidates[0]).direction);
       setSelectedCell({ row, col });
     },
-    [grid, placedWords, selectedCell, activeDirection]
+    [placedWords, selectedCell, activeDirection]
   );
 
   const selectWord = useCallback((word: PlacedWord) => {
@@ -127,113 +183,78 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
       const { row, col } = selectedCell;
       const upper = letter.toUpperCase();
 
-      setGrid(current => {
-        const next = current.map((r, ri) =>
-          r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: upper } : cell))
-        );
+      const next = gridRef.current.map((r, ri) =>
+        r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: upper } : cell))
+      );
+      commitGrid(next);
 
-        if (activeWord && isWordComplete(next, activeWord) && !completedWordIds.has(activeWord.id)) {
-          setCompletedWordIds(prev => new Set(prev).add(activeWord.id));
-          setLearnedWord(activeWord);
+      // Palavras que passam por esta célula e ficaram certas agora
+      // (a digitada e, se for o caso, a que a cruza).
+      const finished = wordsAtCell(placedWords, row, col).filter(
+        word => !completedRef.current.has(word.id) && isWordComplete(next, word)
+      );
 
-          const puzzleWillBeComplete = isPuzzleComplete(next);
-          addProgress(progressRef.current, {
-            xp: XP_PER_WORD + (puzzleWillBeComplete ? XP_PER_PUZZLE : 0),
-            coins: 5,
-            newlyLearnedWordId: activeWord.id
-          }).then(setProgress);
-        }
+      if (finished.length > 0) {
+        markCompleted(finished.map(word => word.id));
+        setLearnedWord(finished.find(word => word.id === activeWord?.id) ?? finished[0]);
 
-        return next;
-      });
+        const puzzleDone = isPuzzleComplete(next);
+        finished.forEach((word, index) => {
+          const bonus = puzzleDone && index === 0;
+          applyProgress({
+            xp: XP_PER_WORD + (bonus ? XP_PER_PUZZLE : 0),
+            coins: COINS_PER_WORD + (bonus ? COINS_PER_PUZZLE : 0),
+            newlyLearnedWordId: word.id
+          });
+        });
+      }
 
       moveWithinActiveWord(row, col, 1);
     },
-    [selectedCell, activeWord, completedWordIds, moveWithinActiveWord]
+    [selectedCell, activeWord, placedWords, commitGrid, markCompleted, applyProgress, moveWithinActiveWord]
   );
 
   const erase = useCallback(() => {
     if (!selectedCell) return;
     const { row, col } = selectedCell;
+    const current = gridRef.current;
 
-    setGrid(current => {
-      const currentValue = current[row][col].value;
-      if (currentValue) {
-        return current.map((r, ri) =>
+    if (current[row][col].value) {
+      commitGrid(
+        current.map((r, ri) =>
           r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: "" } : cell))
-        );
-      }
-      return current;
-    });
-
-    if (!grid[row][col].value) {
+        )
+      );
+    } else {
       moveWithinActiveWord(row, col, -1);
     }
-  }, [selectedCell, grid, moveWithinActiveWord]);
+  }, [selectedCell, commitGrid, moveWithinActiveWord]);
 
   const dismissLearnedWord = useCallback(() => setLearnedWord(null), []);
 
-  const useHint = useCallback(() => {
-    if (!activeWord || progress.coins < 20) return;
-    const nextEmptyIndex = activeWord.answer
-      .split("")
-      .findIndex((letter, i) => {
-        const r = activeWord.direction === "down" ? activeWord.row + i : activeWord.row;
-        const c = activeWord.direction === "across" ? activeWord.col + i : activeWord.col;
-        return grid[r][c].value !== letter;
-      });
-    if (nextEmptyIndex === -1) return;
-
-    const row = activeWord.direction === "down" ? activeWord.row + nextEmptyIndex : activeWord.row;
-    const col = activeWord.direction === "across" ? activeWord.col + nextEmptyIndex : activeWord.col;
-    const letter = activeWord.answer[nextEmptyIndex];
-
-    const wordWillComplete =
-      !completedWordIds.has(activeWord.id) &&
-      activeWord.answer
-        .split("")
-        .every((expected, i) => {
-          const r = activeWord.direction === "down" ? activeWord.row + i : activeWord.row;
-          const c = activeWord.direction === "across" ? activeWord.col + i : activeWord.col;
-          return (r === row && c === col) || grid[r][c].value === expected;
-        });
-
-    addProgress(progressRef.current, {
-      coins: -20,
-      xp: wordWillComplete ? XP_PER_WORD : 0,
-      newlyLearnedWordId: wordWillComplete ? activeWord.id : undefined
-    }).then(setProgress);
-
-    if (wordWillComplete) {
-      setCompletedWordIds(prev => new Set(prev).add(activeWord.id));
-    }
-
-    setGrid(current =>
-      current.map((r, ri) =>
-        r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: letter } : cell))
-      )
-    );
-  }, [activeWord, progress.coins, grid, completedWordIds]);
-
   /**
-   * Botão "revelar letra": grátis, revela UMA letra por toque.
+   * Botão de dica: revela UMA letra e cobra REVEAL_COST moedas.
+   * Sem moedas suficientes não faz nada (o botão também aparece bloqueado).
+   *
    * Começa pela palavra selecionada; quando ela fica pronta, segue para a
-   * próxima palavra incompleta, até o puzzle inteiro ficar preenchido.
-   * Palavras terminadas com ajuda contam como aprendidas, mas não dão XP/moedas.
+   * próxima palavra incompleta. Palavras terminadas com ajuda contam como
+   * aprendidas, mas não dão XP nem moedas.
    */
   const revealNext = useCallback(() => {
-    if (complete) return;
+    const current = gridRef.current;
+    if (isPuzzleComplete(current)) return;
+    if (progressRef.current.coins < REVEAL_COST) return;
 
     const target =
-      activeWord && !isWordComplete(grid, activeWord)
+      activeWord && !isWordComplete(current, activeWord)
         ? activeWord
-        : placedWords.find(word => !isWordComplete(grid, word));
+        : placedWords.find(word => !isWordComplete(current, word));
     if (!target) return;
 
-    const index = target.answer.split("").findIndex((letter, i) => {
+    const index = target.answer.split("").findIndex((expected, i) => {
       const r = target.direction === "down" ? target.row + i : target.row;
       const c = target.direction === "across" ? target.col + i : target.col;
-      return grid[r][c].value !== letter;
+      return current[r][c].value !== expected;
     });
     if (index === -1) return;
 
@@ -241,33 +262,25 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     const col = target.direction === "across" ? target.col + index : target.col;
     const letter = target.answer[index];
 
-    const next = grid.map((r, ri) =>
+    // Cobra primeiro (síncrono), depois revela.
+    applyProgress({ coins: -REVEAL_COST });
+
+    const next = current.map((r, ri) =>
       r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: letter } : cell))
     );
-    setGrid(next);
+    commitGrid(next);
     setActiveDirection(target.direction);
     setSelectedCell({ row, col });
 
     // A letra revelada pode terminar a palavra atual e/ou a que a cruza.
     const newlyDone = placedWords.filter(
-      word => !completedWordIds.has(word.id) && isWordComplete(next, word)
+      word => !completedRef.current.has(word.id) && isWordComplete(next, word)
     );
     if (newlyDone.length > 0) {
-      setCompletedWordIds(prev => {
-        const updated = new Set(prev);
-        newlyDone.forEach(word => updated.add(word.id));
-        return updated;
-      });
-
-      (async () => {
-        let current = progressRef.current;
-        for (const word of newlyDone) {
-          current = await addProgress(current, { newlyLearnedWordId: word.id });
-        }
-        setProgress(current);
-      })();
+      markCompleted(newlyDone.map(word => word.id));
+      newlyDone.forEach(word => applyProgress({ newlyLearnedWordId: word.id }));
     }
-  }, [complete, activeWord, grid, placedWords, completedWordIds]);
+  }, [activeWord, placedWords, commitGrid, markCompleted, applyProgress]);
 
   const lettersLeft = useMemo(
     () =>
@@ -278,6 +291,8 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
       ),
     [grid]
   );
+
+  const canReveal = !complete && progress.coins >= REVEAL_COST;
 
   return {
     grid,
@@ -297,8 +312,9 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     selectWord,
     typeLetter,
     erase,
-    useHint,
     revealNext,
+    revealCost: REVEAL_COST,
+    canReveal,
     lettersLeft,
     dismissLearnedWord
   };

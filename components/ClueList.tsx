@@ -25,7 +25,11 @@ export default function ClueList({ words, activeWordId, completedWordIds, onSele
             onPress={() => onSelectWord(word)}
           >
             <Text style={[styles.number, isDone && styles.numberDone]}>{word.number ?? ""}.</Text>
-            <Text style={[styles.clue, isDone && styles.clueDone]}>{word.clue}</Text>
+            <Text style={[styles.clue, isDone && styles.clueDone]}>
+              {word.clueLang === "pt" ? "🇧🇷 " : word.clueLang === "en" ? "🇺🇸 " : ""}
+              {word.clue}
+            </Text>
+            <Text style={styles.length}>{word.answer.length}</Text>
             {isDone && <Text style={styles.check}>✓</Text>}
           </TouchableOpacity>
         );
@@ -35,8 +39,8 @@ export default function ClueList({ words, activeWordId, completedWordIds, onSele
 
   return (
     <View style={styles.box}>
-      {across.length > 0 && renderGroup("ACROSS", across)}
-      {down.length > 0 && renderGroup("DOWN", down)}
+      {across.length > 0 && renderGroup("HORIZONTAIS", across)}
+      {down.length > 0 && renderGroup("VERTICAIS", down)}
     </View>
   );
 }
@@ -49,7 +53,8 @@ const styles = StyleSheet.create({
   itemActive: { backgroundColor: "#26324a", paddingHorizontal: 8 },
   number: { color: "#22c55e", fontWeight: "900", width: 26 },
   numberDone: { color: "#4b5563" },
-  clue: { color: "#e2e8f0", flex: 1 },
+  clue: { color: "#e2e8f0", flex: 1, fontSize: 16, fontWeight: "700" },
+  length: { color: "#64748b", fontWeight: "800", fontSize: 12, marginLeft: 8 },
   clueDone: { color: "#64748b", textDecorationLine: "line-through" },
   check: { color: "#22c55e", fontWeight: "900", marginLeft: 6 }
 });

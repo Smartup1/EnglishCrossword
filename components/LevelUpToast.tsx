@@ -51,8 +51,8 @@ export default function LevelUpToast({ level, onDone }: Props) {
         }
       ]}
     >
-      <Text style={styles.title}>🎉 LEVEL UP!</Text>
-      <Text style={styles.subtitle}>You reached level {level}</Text>
+      <Text style={styles.title}>🎉 SUBIU DE NÍVEL!</Text>
+      <Text style={styles.subtitle}>Você chegou ao nível {level}</Text>
     </Animated.View>
   );
 }

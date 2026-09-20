@@ -20,7 +20,13 @@ const HiddenKeyboardInput = forwardRef<TextInput, Props>(
       if (text.length === 0) {
         onErase();
       } else {
-        const letter = text.replace(/\u200B/g, "").slice(-1).toUpperCase();
+        // Tira acentos: ã -> A, ç -> C, é -> E (respostas em português usam só A–Z).
+        const letter = text
+          .replace(/\u200B/g, "")
+          .slice(-1)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase();
         if (/^[A-Z]$/.test(letter)) onLetter(letter);
       }
       forceRender(n => n + 1);

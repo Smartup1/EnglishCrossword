@@ -7,6 +7,19 @@ type Props = {
   onDismiss: () => void;
 };
 
+// Categorias do banco de palavras (em inglês) mostradas em português.
+const CATEGORY_PT: Record<string, string> = {
+  education: "educação",
+  food: "comida",
+  home: "casa",
+  travel: "viagem",
+  family: "família",
+  feelings: "sentimentos",
+  technology: "tecnologia",
+  business: "negócios",
+  movies: "filmes"
+};
+
 export default function WordLearnedCard({ word, onDismiss }: Props) {
   if (!word) return null;
 
@@ -14,22 +27,26 @@ export default function WordLearnedCard({ word, onDismiss }: Props) {
     <Modal transparent animationType="fade" visible={!!word} onRequestClose={onDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.badge}>✓ WORD COMPLETE +10 XP</Text>
-          <Text style={styles.answer}>{word.answer}</Text>
-
-          {word.translation && <Text style={styles.translation}>{word.translation}</Text>}
+          <Text style={styles.badge}>✓ PALAVRA COMPLETA +10 XP</Text>
+          {/* As duas línguas, sempre na mesma ordem, não importa a direção do jogo */}
+          <Text style={styles.answer}>
+            🇺🇸 {(word.english ?? word.answer).toUpperCase()}
+          </Text>
+          <Text style={styles.translation}>
+            🇧🇷 {word.portuguese ?? word.translation}
+          </Text>
           {word.pronunciation && <Text style={styles.pronunciation}>{word.pronunciation}</Text>}
-          {word.category && <Text style={styles.category}>#{word.category}</Text>}
+          {word.category && <Text style={styles.category}>#{CATEGORY_PT[word.category] ?? word.category}</Text>}
 
           {word.example && (
             <View style={styles.exampleBox}>
-              <Text style={styles.exampleLabel}>EXAMPLE</Text>
+              <Text style={styles.exampleLabel}>EXEMPLO</Text>
               <Text style={styles.example}>{word.example}</Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>CONTINUE ▶</Text>
+            <Text style={styles.buttonText}>CONTINUAR ▶</Text>
           </TouchableOpacity>
         </View>
 

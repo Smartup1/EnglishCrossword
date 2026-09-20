@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   ScrollView,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import CrosswordGrid from "../components/CrosswordGrid";
 import ClueList from "../components/ClueList";
@@ -18,10 +18,21 @@ import LevelUpToast from "../components/LevelUpToast";
 import WordLearnedCard from "../components/WordLearnedCard";
 import { useCrosswordGame } from "../hooks/useCrosswordGame";
 import { PlacedWord } from "../types/crossword";
+import { ALL_WORDS } from "../data/words";
+import { parseMode, prepareWords } from "../game/wordModes";
 
 export default function GameScreen() {
+  // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
+  const [round, setRound] = useState(0);
+  return <GameRound key={round} onNextRound={() => setRound(r => r + 1)} />;
+}
+
+function GameRound({ onNextRound }: { onNextRound: () => void }) {
   const router = useRouter();
-  const game = useCrosswordGame();
+  // Direção da tradução escolhida na tela inicial (pt-en, en-pt ou mixed).
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const words = useMemo(() => prepareWords(ALL_WORDS, parseMode(mode)), [mode]);
+  const game = useCrosswordGame(words);
 
   // Teclado do próprio celular: um TextInput invisível recebe o foco
   // sempre que o jogador toca em uma célula ou em uma pista.
@@ -113,10 +124,11 @@ export default function GameScreen() {
 
   const clearLevelToast = useCallback(() => setLevelToast(null), []);
 
-  const hintDisabled =
-    game.complete ||
-    !game.activeWord ||
-    game.coins < 20;
+  // Ao completar, volta ao topo para mostrar o cartão de parabéns.
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (game.complete) scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [game.complete]);
 
   return (
     <View style={styles.container}>
@@ -132,7 +144,7 @@ export default function GameScreen() {
 
         <View style={styles.headerCenter}>
           <Text style={styles.level}>
-            LEVEL {game.level}
+            NÍVEL {game.level}
           </Text>
 
           <Text style={styles.xp}>
@@ -142,24 +154,11 @@ export default function GameScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.headerButton}
-          onPress={game.useHint}
-          disabled={hintDisabled}
-        >
-          <Text
-            style={[
-              styles.hint,
-              hintDisabled && styles.hintDisabled
-            ]}
-          >
-            💡
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 30 + keyboardHeight }
@@ -169,6 +168,7 @@ export default function GameScreen() {
       >
         {/* COMPLETE */}
         {game.complete && (
+          <>
           <View style={styles.completeBox}>
             <Text style={styles.completeEmoji}>
               🎉
@@ -176,14 +176,23 @@ export default function GameScreen() {
 
             <View>
               <Text style={styles.complete}>
-                PUZZLE COMPLETE!
+                CRUZADINHA COMPLETA!
               </Text>
 
               <Text style={styles.completeSubtext}>
-                Great job! You completed the crossword.
+                Parabéns! Você completou a cruzadinha.
               </Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.nextButton}
+            onPress={onNextRound}
+          >
+            <Text style={styles.nextText}>▶ PRÓXIMA CRUZADINHA</Text>
+          </TouchableOpacity>
+          </>
         )}
 
         {/* ACTIVE CLUE */}
@@ -195,11 +204,13 @@ export default function GameScreen() {
               >
                 {game.activeWord.number}.
                 {" "}
-                {game.activeWord.direction.toUpperCase()}
+                {game.activeWord.direction === "across" ? "HORIZONTAL" : "VERTICAL"}
               </Text>
 
               <Text style={styles.activeClueHint}>
-                {game.activeWord.answer.length} letters
+                {game.activeWord.answer.length} letras
+                {"  ·  "}
+                {game.activeWord.clueLang === "pt" ? "🇧🇷 → 🇺🇸" : "🇺🇸 → 🇧🇷"}
               </Text>
             </View>
 
@@ -219,27 +230,55 @@ export default function GameScreen() {
           />
         </View>
 
-        {/* REVEAL BUTTON */}
+        {/* BOTÃO DE DICA: gasta moedas e fica bloqueado sem saldo */}
         {!game.complete && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={styles.revealButton}
-            onPress={game.revealNext}
-          >
-            <Text style={styles.revealText}>
-              💡 REVEAL NEXT LETTER
-            </Text>
+          <>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={!game.canReveal}
+              style={[
+                styles.revealButton,
+                !game.canReveal && styles.revealButtonDisabled
+              ]}
+              onPress={game.revealNext}
+            >
+              <View>
+                <Text
+                  style={[
+                    styles.revealText,
+                    !game.canReveal && styles.revealTextDisabled
+                  ]}
+                >
+                  💡 REVELAR PRÓXIMA LETRA
+                </Text>
 
-            <Text style={styles.revealCount}>
-              {game.lettersLeft} left
-            </Text>
-          </TouchableOpacity>
+                <Text style={styles.revealCount}>
+                  {game.lettersLeft === 1 ? "falta 1 letra" : `faltam ${game.lettersLeft} letras`}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.revealCost,
+                  !game.canReveal && styles.revealTextDisabled
+                ]}
+              >
+                🪙 {game.revealCost}
+              </Text>
+            </TouchableOpacity>
+
+            {!game.canReveal && (
+              <Text style={styles.revealHint}>
+                Você precisa de {game.revealCost} 🪙 para uma dica. Complete palavras para ganhar moedas.
+              </Text>
+            )}
+          </>
         )}
 
         {/* CLUES */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            CLUES
+            PALAVRA A SER TRADUZIDA
           </Text>
 
           <ClueList
@@ -448,6 +487,50 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     fontWeight: "800",
     fontSize: 12
+  },
+
+  headerSpacer: {
+    width: 44,
+    height: 44
+  },
+
+  revealButtonDisabled: {
+    borderColor: "#334155",
+    opacity: 0.7
+  },
+
+  revealTextDisabled: {
+    color: "#64748b"
+  },
+
+  revealCost: {
+    color: "#facc15",
+    fontWeight: "900",
+    fontSize: 16
+  },
+
+  revealHint: {
+    color: "#94a3b8",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: -10,
+    marginBottom: 20
+  },
+
+  nextButton: {
+    width: "100%",
+    backgroundColor: "#22c55e",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  nextText: {
+    color: "#052e16",
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 0.5
   },
 
   section: {

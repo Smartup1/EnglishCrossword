@@ -2,6 +2,9 @@ export type Direction = "across" | "down";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+/** Idioma da pista mostrada ao jogador (a resposta está no outro idioma). */
+export type ClueLang = "en" | "pt";
+
 export type CrosswordWord = {
   id: string;
   answer: string;
@@ -14,6 +17,12 @@ export type CrosswordWord = {
   row?: number;
   col?: number;
   direction?: Direction;
+  /** Forma de exibição em inglês (ex.: "school"). Preenchido por prepareWords. */
+  english?: string;
+  /** Forma de exibição em português, com acentos (ex.: "maçã"). Preenchido por prepareWords. */
+  portuguese?: string;
+  /** Idioma da pista. "pt" = vê português e responde em inglês. */
+  clueLang?: ClueLang;
 };
 
 /** A word after the generator has assigned it a fixed position. */
