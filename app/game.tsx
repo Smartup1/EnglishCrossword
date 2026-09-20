@@ -1,7 +1,10 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
@@ -9,13 +12,63 @@ import { useRouter } from "expo-router";
 
 import CrosswordGrid from "../components/CrosswordGrid";
 import ClueList from "../components/ClueList";
-import Keyboard from "../components/Keyboard";
+import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
 import WordLearnedCard from "../components/WordLearnedCard";
 import { useCrosswordGame } from "../hooks/useCrosswordGame";
+import { PlacedWord } from "../types/crossword";
 
 export default function GameScreen() {
   const router = useRouter();
   const game = useCrosswordGame();
+
+  // Teclado do próprio celular: um TextInput invisível recebe o foco
+  // sempre que o jogador toca em uma célula ou em uma pista.
+  const inputRef = useRef<TextInput>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e =>
+      setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+      // No Android, o botão "voltar" fecha o teclado mas o campo continua
+      // focado; sem o blur, o próximo focus() não reabriria o teclado.
+      inputRef.current?.blur();
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const openKeyboard = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const { selectCell, selectWord, dismissLearnedWord } = game;
+
+  const handleSelectCell = useCallback(
+    (row: number, col: number) => {
+      selectCell(row, col);
+      openKeyboard();
+    },
+    [selectCell, openKeyboard]
+  );
+
+  const handleSelectWord = useCallback(
+    (word: PlacedWord) => {
+      selectWord(word);
+      openKeyboard();
+    },
+    [selectWord, openKeyboard]
+  );
+
+  const handleDismissLearned = useCallback(() => {
+    dismissLearnedWord();
+    // O Modal tira o foco do campo; devolve depois que ele fecha.
+    setTimeout(openKeyboard, 150);
+  }, [dismissLearnedWord, openKeyboard]);
 
   const hintDisabled =
     game.complete ||
@@ -64,7 +117,10 @@ export default function GameScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 30 + keyboardHeight }
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -116,7 +172,7 @@ export default function GameScreen() {
             grid={game.grid}
             selected={game.selected}
             highlightedCells={game.activeWordCells}
-            onSelect={game.selectCell}
+            onSelect={handleSelectCell}
           />
         </View>
 
@@ -130,25 +186,25 @@ export default function GameScreen() {
             words={game.words}
             activeWordId={game.activeWord?.id}
             completedWordIds={game.completedWordIds}
-            onSelectWord={game.selectWord}
+            onSelectWord={handleSelectWord}
           />
         </View>
 
-        {/* KEYBOARD */}
-        {!game.complete && (
-          <View style={styles.keyboardSection}>
-            <Keyboard
-              onPress={game.typeLetter}
-              onErase={game.erase}
-            />
-          </View>
-        )}
       </ScrollView>
+
+      {/* TECLADO DO CELULAR (campo invisível) */}
+      {!game.complete && (
+        <HiddenKeyboardInput
+          ref={inputRef}
+          onLetter={game.typeLetter}
+          onErase={game.erase}
+        />
+      )}
 
       {/* WORD LEARNED MODAL */}
       <WordLearnedCard
         word={game.learnedWord}
-        onDismiss={game.dismissLearnedWord}
+        onDismiss={handleDismissLearned}
       />
     </View>
   );
@@ -300,7 +356,6 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 8
   },
-
   sectionTitle: {
     color: "#64748b",
     fontSize: 11,
@@ -308,9 +363,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 8
   },
-
-  keyboardSection: {
-    width: "100%",
-    marginTop: 4
-  }
 });
