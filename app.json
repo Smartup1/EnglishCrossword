@@ -6,7 +6,12 @@
     "orientation": "portrait",
     "scheme": "englishcrossword",
     "userInterfaceStyle": "dark",
-    "plugins": ["expo-router"],
-    "experiments": { "typedRoutes": true }
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
