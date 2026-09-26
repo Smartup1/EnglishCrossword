@@ -22,6 +22,9 @@ import { ALL_WORDS } from "../data/words";
 import { parseMode, prepareWords } from "../game/wordModes";
 import { speakEnglish } from "../services/speech";
 
+// Ponha true para ver no terminal quando o teclado abre/fecha (diagnóstico).
+const DEBUG_KEYBOARD = false;
+
 export default function GameScreen() {
   // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
   const [round, setRound] = useState(0);
@@ -39,28 +42,67 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
   // sempre que o jogador toca em uma célula ou em uma pista.
   const inputRef = useRef<TextInput>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardVisible = useRef(false);
+  const lastTypedAt = useRef(0);
+  const reopening = useRef(false);
+
+  // Solta e devolve o foco. É o único jeito de o React Native reabrir o
+  // teclado quando ele ainda acha que o campo está focado.
+  const reopenKeyboard = useCallback(() => {
+    if (reopening.current) return;
+    reopening.current = true;
+    inputRef.current?.blur();
+    setTimeout(() => {
+      inputRef.current?.focus();
+      setTimeout(() => {
+        reopening.current = false;
+      }, 400);
+    }, 60);
+  }, []);
 
   useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e =>
-      setKeyboardHeight(e.endCoordinates.height)
-    );
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      if (DEBUG_KEYBOARD) console.log("[teclado] abriu");
+      keyboardVisible.current = true;
+      setKeyboardHeight(e.endCoordinates.height);
+    });
     const hide = Keyboard.addListener("keyboardDidHide", () => {
+      const sinceTyped = Date.now() - lastTypedAt.current;
+      if (DEBUG_KEYBOARD) console.log("[teclado] fechou", { sinceTyped, reopening: reopening.current });
+      keyboardVisible.current = false;
       setKeyboardHeight(0);
-      // No Android, o botão "voltar" fecha o teclado mas o campo continua
-      // focado; sem o blur, o próximo focus() não reabriria o teclado.
-      inputRef.current?.blur();
+      // Sumiu logo depois de uma letra? Foi o teclado piscando (o campo é
+      // reposto a cada letra), não o jogador: reabre sozinho.
+      if (!reopening.current && sinceTyped < 600) reopenKeyboard();
     });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, []);
+  }, [reopenKeyboard]);
 
   const openKeyboard = useCallback(() => {
-    inputRef.current?.focus();
-  }, []);
+    const input = inputRef.current;
+    if (!input || keyboardVisible.current) return; // já está aberto
+    // Foco "preso" (ex.: o botão voltar fechou o teclado): precisa soltar antes.
+    if (input.isFocused()) reopenKeyboard();
+    else input.focus();
+  }, [reopenKeyboard]);
 
-  const { selectCell, selectWord, dismissLearnedWord } = game;
+  const { selectCell, selectWord, dismissLearnedWord, typeLetter, erase } = game;
+
+  const handleLetter = useCallback(
+    (letter: string) => {
+      lastTypedAt.current = Date.now();
+      typeLetter(letter);
+    },
+    [typeLetter]
+  );
+
+  const handleErase = useCallback(() => {
+    lastTypedAt.current = Date.now();
+    erase();
+  }, [erase]);
 
   const handleSelectCell = useCallback(
     (row: number, col: number) => {
@@ -338,8 +380,8 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
       {!game.complete && (
         <HiddenKeyboardInput
           ref={inputRef}
-          onLetter={game.typeLetter}
-          onErase={game.erase}
+          onLetter={handleLetter}
+          onErase={handleErase}
         />
       )}
 

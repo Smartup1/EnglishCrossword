@@ -44,6 +44,7 @@ const HiddenKeyboardInput = forwardRef<TextInput, Props>(
         spellCheck={false}
         caretHidden
         contextMenuHidden
+        submitBehavior="submit" // Enter/OK não tira o foco (senão o teclado fecha)
         keyboardType="visible-password" // Android: sem sugestões/autocorreção
         importantForAutofill="no"
         accessibilityElementsHidden
