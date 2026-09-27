@@ -16,9 +16,9 @@ import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
 import Confetti from "../components/Confetti";
 import AchievementToast, { Toast } from "../components/AchievementToast";
 import WordLearnedCard from "../components/WordLearnedCard";
-import { useCrosswordGame } from "../hooks/useCrosswordGame";
+import { useCrosswordGame, LevelContext } from "../hooks/useCrosswordGame";
 import { PlacedWord } from "../types/crossword";
-import { ALL_WORDS } from "../data/words";
+import { CategoryKey, getCategoryInfo, getCategoryLevelWords, getWordsByCategory } from "../data/words";
 import { parseMode, prepareWords } from "../game/wordModes";
 import { speakEnglish } from "../services/speech";
 
@@ -27,16 +27,68 @@ const DEBUG_KEYBOARD = false;
 
 export default function GameScreen() {
   // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
+  // A chave também muda quando mode/category/level mudam (ex.: ao avançar de fase
+  // via router.replace), senão o estado interno (grade, palavras completadas...)
+  // do round anterior ficaria preso.
+  const { mode, category, level } = useLocalSearchParams<{
+    mode?: string;
+    category?: string;
+    level?: string;
+  }>();
   const [round, setRound] = useState(0);
-  return <GameRound key={round} onNextRound={() => setRound(r => r + 1)} />;
+  const key = `${mode ?? ""}|${category ?? ""}|${level ?? ""}|${round}`;
+  return <GameRound key={key} onNextRound={() => setRound(r => r + 1)} />;
 }
 
 function GameRound({ onNextRound }: { onNextRound: () => void }) {
   const router = useRouter();
-  // Direção da tradução escolhida na tela inicial (pt-en, en-pt ou mixed).
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const words = useMemo(() => prepareWords(ALL_WORDS, parseMode(mode)), [mode]);
-  const game = useCrosswordGame(words);
+  // Direção da tradução, categoria e nível (dentro da categoria) escolhidos
+  // na tela inicial. category/level vazios ou ausentes = todas as categorias,
+  // sem progressão de nível (comportamento antigo).
+  const { mode, category, level } = useLocalSearchParams<{
+    mode?: string;
+    category?: string;
+    level?: string;
+  }>();
+  const categoryKey = (category || undefined) as CategoryKey | undefined;
+  const categoryInfo = categoryKey ? getCategoryInfo(categoryKey) : undefined;
+  const requestedLevel = level ? parseInt(Array.isArray(level) ? level[0] : level, 10) : undefined;
+  // Nível válido só quando há categoria + nível numérico + a categoria realmente tem níveis.
+  const activeLevel =
+    categoryInfo && requestedLevel && requestedLevel >= 1
+      ? Math.min(requestedLevel, categoryInfo.levels.length)
+      : undefined;
+
+  const words = useMemo(() => {
+    const pool =
+      categoryKey && activeLevel
+        ? getCategoryLevelWords(categoryKey, activeLevel)
+        : getWordsByCategory(categoryKey);
+    return prepareWords(pool, parseMode(mode));
+  }, [mode, categoryKey, activeLevel]);
+
+  const levelContext: LevelContext | undefined =
+    categoryKey && activeLevel && categoryInfo
+      ? { categoryKey, level: activeLevel, totalLevels: categoryInfo.levels.length }
+      : undefined;
+
+  const game = useCrosswordGame(words, 6, levelContext);
+
+  // Terminou o último nível da categoria (não há mais o que desbloquear).
+  const categoryCompleted = !!levelContext && levelContext.level >= levelContext.totalLevels;
+  // Acabou de liberar a próxima fase ao completar esta cruzadinha.
+  const justUnlockedNextLevel =
+    !!levelContext && game.unlockedLevel !== null && game.unlockedLevel > levelContext.level;
+
+  const goToNextLevel = useCallback(() => {
+    if (!levelContext || game.unlockedLevel === null) return;
+    router.replace({
+      pathname: "/game",
+      params: { mode, category: levelContext.categoryKey, level: String(game.unlockedLevel) }
+    });
+  }, [levelContext, game.unlockedLevel, router, mode]);
+
+  const goPickCategory = useCallback(() => router.replace("/"), [router]);
 
   // Teclado do próprio celular: um TextInput invisível recebe o foco
   // sempre que o jogador toca em uma célula ou em uma pista.
@@ -175,6 +227,15 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
     );
   }, [game.goalEvent]);
 
+  // Próxima fase da categoria liberada: aviso + confete.
+  useEffect(() => {
+    if (game.levelUnlockEvent === 0 || !levelContext) return;
+    notify(
+      "🔓 PRÓXIMA FASE LIBERADA!",
+      `${categoryInfo?.label ?? "Categoria"} · Fase ${game.unlockedLevel} de ${levelContext.totalLevels}`
+    );
+  }, [game.levelUnlockEvent]);
+
   // Libera os avisos guardados quando o card da palavra não está na tela.
   useEffect(() => {
     if (pendingToasts.length > 0 && !game.learnedWord) {
@@ -222,6 +283,12 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
               ? "✅ meta do dia"
               : `🎯 ${Math.min(game.dailyWords, game.dailyGoal)}/${game.dailyGoal} hoje`}
           </Text>
+
+          {levelContext && categoryInfo && (
+            <Text style={styles.categoryBadge}>
+              {categoryInfo.label} · Fase {levelContext.level}/{levelContext.totalLevels}
+            </Text>
+          )}
         </View>
 
         <View style={styles.headerSpacer} />
@@ -241,27 +308,49 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
           <>
           <View style={styles.completeBox}>
             <Text style={styles.completeEmoji}>
-              🎉
+              {categoryCompleted ? "🏆" : "🎉"}
             </Text>
 
             <View>
               <Text style={styles.complete}>
-                CRUZADINHA COMPLETA!
+                {categoryCompleted ? "CATEGORIA COMPLETA!" : "CRUZADINHA COMPLETA!"}
               </Text>
 
               <Text style={styles.completeSubtext}>
-                Parabéns! Você completou a cruzadinha.
+                {categoryCompleted
+                  ? `Você terminou todas as fases de ${categoryInfo?.label ?? "categoria"}.`
+                  : "Parabéns! Você completou a cruzadinha."}
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.nextButton}
-            onPress={onNextRound}
-          >
-            <Text style={styles.nextText}>▶ PRÓXIMA CRUZADINHA</Text>
-          </TouchableOpacity>
+          {justUnlockedNextLevel ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.nextButton}
+              onPress={goToNextLevel}
+            >
+              <Text style={styles.nextText}>▶ FASE {game.unlockedLevel} — JOGAR</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.nextButton}
+              onPress={onNextRound}
+            >
+              <Text style={styles.nextText}>▶ PRÓXIMA CRUZADINHA</Text>
+            </TouchableOpacity>
+          )}
+
+          {categoryCompleted && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.secondary}
+              onPress={goPickCategory}
+            >
+              <Text style={styles.secondaryText}>ESCOLHER OUTRA CATEGORIA</Text>
+            </TouchableOpacity>
+          )}
           </>
         )}
 
@@ -541,6 +630,13 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
 
+  categoryBadge: {
+    color: "#7dd3fc",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
   activeClueRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -645,6 +741,23 @@ const styles = StyleSheet.create({
     color: "#052e16",
     fontWeight: "900",
     fontSize: 15,
+    letterSpacing: 0.5
+  },
+
+  secondary: {
+    borderWidth: 1,
+    borderColor: "#334155",
+    paddingVertical: 14,
+    borderRadius: 14,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  secondaryText: {
+    fontWeight: "800",
+    color: "#e2e8f0",
+    fontSize: 13,
     letterSpacing: 0.5
   },
 

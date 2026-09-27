@@ -7,7 +7,8 @@ import {
   levelForXp,
   loadProgress,
   PlayerProgress,
-  saveProgress
+  saveProgress,
+  unlockNextLevel
 } from "../services/progressStorage";
 import {
   DAILY_GOAL_COINS,
@@ -36,6 +37,13 @@ type SelectedCell = { row: number; col: number };
 
 type ProgressDelta = { xp?: number; coins?: number; newlyLearnedWordId?: string };
 
+/** Quando o puzzle é o nível de uma categoria (não o modo "Todas"). */
+export type LevelContext = {
+  categoryKey: string;
+  level: number;
+  totalLevels: number;
+};
+
 function cloneGrid(grid: Cell[][]): Cell[][] {
   return grid.map(row => row.map(cell => ({ ...cell })));
 }
@@ -55,7 +63,11 @@ function indexInWord(word: PlacedWord, row: number, col: number): number {
   return word.direction === "down" ? row - word.row : col - word.col;
 }
 
-export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 6) {
+export function useCrosswordGame(
+  words: CrosswordWord[] = ALL_WORDS,
+  maxWords = 6,
+  levelContext?: LevelContext
+) {
   // Cada vez que a tela do jogo abre, sorteia palavras e cruzamentos novos.
   const crossword = useMemo(
     () =>
@@ -97,6 +109,9 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
   const progressRef = useRef(progress);
   // Sobe 1 a cada vez que o jogador cumpre a meta do dia (a tela comemora).
   const [goalEvent, setGoalEvent] = useState(0);
+  // Sobe 1 a cada vez que o jogador libera o próximo nível de uma categoria.
+  const [levelUnlockEvent, setLevelUnlockEvent] = useState(0);
+  const [unlockedLevel, setUnlockedLevel] = useState<number | null>(null);
 
   /** Aplica ganhos/gastos NA HORA (síncrono) e salva em segundo plano. */
   const applyProgress = useCallback((delta: ProgressDelta) => {
@@ -127,6 +142,20 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     void saveProgress(next);
     if (goalReached) setGoalEvent(n => n + 1);
   }, []);
+
+  /** Ao terminar o puzzle de um nível de categoria, tenta liberar o próximo. */
+  const tryUnlockNextLevel = useCallback(() => {
+    if (!levelContext) return;
+    const { categoryKey, level, totalLevels } = levelContext;
+    const result = unlockNextLevel(progressRef.current, categoryKey, level, totalLevels);
+    if (!result.unlockedNew) return;
+
+    progressRef.current = result.progress;
+    setProgress(result.progress);
+    void saveProgress(result.progress);
+    setUnlockedLevel(result.newLevel);
+    setLevelUnlockEvent(n => n + 1);
+  }, [levelContext]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,11 +260,21 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
             newlyLearnedWordId: word.id
           });
         });
+        if (puzzleDone) tryUnlockNextLevel();
       }
 
       moveWithinActiveWord(row, col, 1);
     },
-    [selectedCell, activeWord, placedWords, commitGrid, markCompleted, applyProgress, moveWithinActiveWord]
+    [
+      selectedCell,
+      activeWord,
+      placedWords,
+      commitGrid,
+      markCompleted,
+      applyProgress,
+      tryUnlockNextLevel,
+      moveWithinActiveWord
+    ]
   );
 
   const erase = useCallback(() => {
@@ -303,8 +342,9 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     if (newlyDone.length > 0) {
       markCompleted(newlyDone.map(word => word.id));
       newlyDone.forEach(word => applyProgress({ newlyLearnedWordId: word.id }));
+      if (isPuzzleComplete(next)) tryUnlockNextLevel();
     }
-  }, [activeWord, placedWords, commitGrid, markCompleted, applyProgress]);
+  }, [activeWord, placedWords, commitGrid, markCompleted, applyProgress, tryUnlockNextLevel]);
 
   const lettersLeft = useMemo(
     () =>
@@ -350,6 +390,10 @@ export function useCrosswordGame(words: CrosswordWord[] = ALL_WORDS, maxWords = 
     dailyGoal: DAILY_GOAL_WORDS,
     dailyGoalCoins: DAILY_GOAL_COINS,
     goalDone: goalDoneToday(progress, today),
-    goalEvent
+    goalEvent,
+    // Progressão de nível por categoria (só relevante quando levelContext é passado)
+    levelUnlockEvent,
+    unlockedLevel,
+    categoryLevels: progress.categoryLevels
   };
 }

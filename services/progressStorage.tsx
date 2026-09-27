@@ -28,6 +28,12 @@ export type PlayerProgress = {
   dailyDate: string | null;
   /** Palavras concluídas em `dailyDate`. */
   dailyWords: number;
+
+  /**
+   * Maior nível já desbloqueado em cada categoria (chave = CategoryKey).
+   * Ausente = ainda não desbloqueou nada além do nível 1.
+   */
+  categoryLevels: Record<string, number>;
 };
 
 /** Perfil zerado, sem presente (usado enquanto carrega e em dados corrompidos). */
@@ -42,6 +48,7 @@ export function emptyProgress(): PlayerProgress {
     lastGoalDate: null,
     dailyDate: null,
     dailyWords: 0,
+    categoryLevels: {},
   };
 }
 
@@ -63,6 +70,17 @@ const num = (value: unknown, fallback: number) =>
 const dateKey = (value: unknown) =>
   typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 
+function parseCategoryLevels(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object") return {};
+  const result: Record<string, number> = {};
+  for (const [key, level] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof level === "number" && Number.isFinite(level) && level >= 1) {
+      result[key] = Math.floor(level);
+    }
+  }
+  return result;
+}
+
 export async function loadProgress(): Promise<PlayerProgress> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -80,6 +98,7 @@ export async function loadProgress(): Promise<PlayerProgress> {
       lastGoalDate: dateKey(parsed.lastGoalDate),
       dailyDate: dateKey(parsed.dailyDate),
       dailyWords: num(parsed.dailyWords, 0),
+      categoryLevels: parseCategoryLevels(parsed.categoryLevels),
     };
   } catch {
     // Corrupted or unavailable storage: fall back to a fresh profile
@@ -118,4 +137,36 @@ export async function addProgress(
 
   await saveProgress(next);
   return next;
+}
+
+// ---------- Progresso por nível de categoria ----------
+
+/** Maior nível já desbloqueado numa categoria (o jogador sempre começa liberado no nível 1). */
+export function getUnlockedLevel(progress: PlayerProgress, categoryKey: string): number {
+  return progress.categoryLevels[categoryKey] ?? 1;
+}
+
+/**
+ * Chamado quando o jogador termina a cruzadinha de `completedLevel` numa categoria.
+ * Só libera o próximo nível se `completedLevel` for a fronteira atual (o nível mais
+ * avançado já desbloqueado) — replay de um nível antigo não desbloqueia nada de novo.
+ */
+export function unlockNextLevel(
+  progress: PlayerProgress,
+  categoryKey: string,
+  completedLevel: number,
+  totalLevels: number
+): { progress: PlayerProgress; unlockedNew: boolean; newLevel: number } {
+  const current = getUnlockedLevel(progress, categoryKey);
+  const next = Math.min(completedLevel + 1, totalLevels);
+
+  if (next <= current) {
+    return { progress, unlockedNew: false, newLevel: current };
+  }
+
+  const updated: PlayerProgress = {
+    ...progress,
+    categoryLevels: { ...progress.categoryLevels, [categoryKey]: next }
+  };
+  return { progress: updated, unlockedNew: true, newLevel: next };
 }
