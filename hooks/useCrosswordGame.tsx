@@ -19,6 +19,7 @@ import {
   streakFor,
   todayKey
 } from "../services/dailyProgress";
+import { playCoinSpent, playKey, playTap, playTick, playTimeUp } from "../services/sounds";
 
 // ---------- Economia do jogo (ajuste aqui) ----------
 const XP_PER_WORD = 10;
@@ -27,6 +28,12 @@ const COINS_PER_WORD = 5;
 const COINS_PER_PUZZLE = 20;
 /** Moedas gastas a cada letra revelada pelo botão de dica. */
 export const REVEAL_COST = 5;
+
+// ---------- Relógio da cruzadinha ----------
+/** Tempo total (segundos) pra terminar cada cruzadinha antes de estourar. */
+export const TIME_LIMIT_SECONDS = 240; // 4 minutos
+/** Moedas cobradas quando o tempo esgota e a cruzadinha é reembaralhada. */
+export const TIMEOUT_COST = 5;
 
 // ---------- Tamanho máximo da grade ----------
 // As células têm 34px e a tela do celular comporta ~9 colunas.
@@ -69,6 +76,9 @@ export function useCrosswordGame(
   levelContext?: LevelContext
 ) {
   // Cada vez que a tela do jogo abre, sorteia palavras e cruzamentos novos.
+  // shuffleSeed muda quando o tempo esgota (ver mais abaixo), forçando uma
+  // nova cruzadinha com o mesmo grupo de palavras sem sair da tela.
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   const crossword = useMemo(
     () =>
       generateCrossword(words, {
@@ -77,7 +87,7 @@ export function useCrosswordGame(
         maxCols: MAX_GRID_COLS,
         maxRows: MAX_GRID_ROWS
       }),
-    [words, maxWords]
+    [words, maxWords, shuffleSeed]
   );
 
   const [grid, setGrid] = useState<Cell[][]>(() => cloneGrid(crossword.grid));
@@ -102,6 +112,23 @@ export function useCrosswordGame(
     completedRef.current = updated;
     setCompletedWordIds(updated);
   }, []);
+
+  // Quando o tempo esgota, shuffleSeed muda e o `crossword` acima é
+  // recalculado (mesmas palavras, cruzamento novo). Aqui a grade e o
+  // progresso da rodada são reiniciados para bater com a cruzadinha nova —
+  // exceto na primeira montagem, que já começa correta.
+  const isFirstCrossword = useRef(true);
+  useEffect(() => {
+    if (isFirstCrossword.current) {
+      isFirstCrossword.current = false;
+      return;
+    }
+    commitGrid(cloneGrid(crossword.grid));
+    completedRef.current = new Set();
+    setCompletedWordIds(new Set());
+    setLearnedWord(null);
+    setSelectedCell(null);
+  }, [crossword, commitGrid]);
 
   // Progresso (XP/moedas/nível/palavras) salvo no aparelho via AsyncStorage.
   // Começa zerado (sem presente) até o progresso salvo carregar.
@@ -191,6 +218,63 @@ export function useCrosswordGame(
 
   const complete = useMemo(() => isPuzzleComplete(grid), [grid]);
 
+  // ---------- Relógio da cruzadinha ----------
+  // Reinicia sempre que uma cruzadinha nova entra em cena (primeira vez ou
+  // reembaralhada por tempo esgotado).
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
+  const lastTickMarkRef = useRef(TIME_LIMIT_SECONDS);
+  // Sobe 1 quando o tempo esgota e a cruzadinha é reembaralhada (tinha moeda).
+  const [timeUpEvent, setTimeUpEvent] = useState(0);
+  // Sobe 1 quando o tempo esgota SEM moeda pra pagar — a tela deve voltar ao início.
+  const [sentHomeEvent, setSentHomeEvent] = useState(0);
+
+  useEffect(() => {
+    setTimeLeft(TIME_LIMIT_SECONDS);
+    lastTickMarkRef.current = TIME_LIMIT_SECONDS;
+  }, [crossword]);
+
+  // Contagem regressiva: pausa enquanto o card de palavra aprendida está
+  // aberto (Modal por cima da tela) ou depois que o jogador já venceu.
+  useEffect(() => {
+    if (complete || learnedWord || timeLeft <= 0) return;
+    const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [timeLeft, complete, learnedWord]);
+
+  // Tique a cada minuto cheio, e mais rápido nos últimos 5 segundos.
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const isMinuteMark = timeLeft % 60 === 0 && timeLeft !== lastTickMarkRef.current;
+    if (isMinuteMark) {
+      lastTickMarkRef.current = timeLeft;
+      playTick();
+    } else if (timeLeft <= 5) {
+      playTick();
+    }
+  }, [timeLeft]);
+
+  // Tempo esgotado: buzina + reembaralha cobrando TIMEOUT_COST, ou — sem
+  // moedas suficientes — avisa a tela (via sentHomeEvent) pra voltar ao início.
+  const timeUpHandledRef = useRef(false);
+  useEffect(() => {
+    if (complete) return;
+    if (timeLeft > 0) {
+      timeUpHandledRef.current = false;
+      return;
+    }
+    if (timeUpHandledRef.current) return;
+    timeUpHandledRef.current = true;
+
+    playTimeUp();
+    if (progressRef.current.coins >= TIMEOUT_COST) {
+      applyProgress({ coins: -TIMEOUT_COST });
+      setShuffleSeed(n => n + 1);
+      setTimeUpEvent(n => n + 1);
+    } else {
+      setSentHomeEvent(n => n + 1);
+    }
+  }, [timeLeft, complete, applyProgress]);
+
   const selectCell = useCallback(
     (row: number, col: number) => {
       if (!gridRef.current[row]?.[col]?.letter) return;
@@ -203,12 +287,14 @@ export function useCrosswordGame(
       if (tappingSameCell && candidates.length > 1) {
         // Alterna entre horizontal/vertical quando a célula pertence a duas palavras.
         setActiveDirection(current => (current === "across" ? "down" : "across"));
+        playTap();
         return;
       }
 
       const preferred = candidates.find(word => word.direction === activeDirection);
       setActiveDirection((preferred ?? candidates[0]).direction);
       setSelectedCell({ row, col });
+      playTap();
     },
     [placedWords, selectedCell, activeDirection]
   );
@@ -216,6 +302,7 @@ export function useCrosswordGame(
   const selectWord = useCallback((word: PlacedWord) => {
     setActiveDirection(word.direction);
     setSelectedCell({ row: word.row, col: word.col });
+    playTap();
   }, []);
 
   const moveWithinActiveWord = useCallback(
@@ -235,6 +322,8 @@ export function useCrosswordGame(
       if (!selectedCell) return;
       const { row, col } = selectedCell;
       const upper = letter.toUpperCase();
+
+      playKey();
 
       const next = gridRef.current.map((r, ri) =>
         r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: upper } : cell))
@@ -282,6 +371,8 @@ export function useCrosswordGame(
     const { row, col } = selectedCell;
     const current = gridRef.current;
 
+    playKey();
+
     if (current[row][col].value) {
       commitGrid(
         current.map((r, ri) =>
@@ -327,6 +418,7 @@ export function useCrosswordGame(
 
     // Cobra primeiro (síncrono), depois revela.
     applyProgress({ coins: -REVEAL_COST });
+    playCoinSpent();
 
     const next = current.map((r, ri) =>
       r.map((cell, ci) => (ri === row && ci === col ? { ...cell, value: letter } : cell))
@@ -394,6 +486,12 @@ export function useCrosswordGame(
     // Progressão de nível por categoria (só relevante quando levelContext é passado)
     levelUnlockEvent,
     unlockedLevel,
-    categoryLevels: progress.categoryLevels
+    categoryLevels: progress.categoryLevels,
+    // Relógio da cruzadinha
+    timeLeft,
+    timeLimit: TIME_LIMIT_SECONDS,
+    timeoutCost: TIMEOUT_COST,
+    timeUpEvent,
+    sentHomeEvent
   };
 }

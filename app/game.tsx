@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,13 @@ import { speakEnglish } from "../services/speech";
 
 // Ponha true para ver no terminal quando o teclado abre/fecha (diagnóstico).
 const DEBUG_KEYBOARD = false;
+
+function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
 
 export default function GameScreen() {
   // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
@@ -236,6 +244,22 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
     );
   }, [game.levelUnlockEvent]);
 
+  // Tempo esgotado, mas o jogador tinha moedas: a cruzadinha foi reembaralhada.
+  useEffect(() => {
+    if (game.timeUpEvent === 0) return;
+    notify("⏳ TEMPO ESGOTADO!", `Cruzadinha reembaralhada  ·  -${game.timeoutCost} 🪙`);
+  }, [game.timeUpEvent]);
+
+  // Tempo esgotado e sem moedas pra pagar a reembaralhada: volta pro início.
+  useEffect(() => {
+    if (game.sentHomeEvent === 0) return;
+    Alert.alert(
+      "⏳ Tempo esgotado!",
+      `Você não tem ${game.timeoutCost} 🪙 pra tentar de novo. Volte quando tiver moedas.`,
+      [{ text: "OK", onPress: () => router.replace("/") }]
+    );
+  }, [game.sentHomeEvent]);
+
   // Libera os avisos guardados quando o card da palavra não está na tela.
   useEffect(() => {
     if (pendingToasts.length > 0 && !game.learnedWord) {
@@ -274,6 +298,16 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
             ⭐ {game.xp} XP
             {"  ·  "}
             🪙 {game.coins}
+          </Text>
+
+          <Text
+            style={[
+              styles.clock,
+              game.timeLeft <= 30 && styles.clockUrgent,
+              game.timeLeft <= 10 && styles.clockCritical
+            ]}
+          >
+            ⏱ {formatClock(game.timeLeft)}
           </Text>
 
           <Text style={styles.daily}>
@@ -635,6 +669,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     marginTop: 2
+  },
+
+  clock: {
+    color: "#94a3b8",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
+  clockUrgent: {
+    color: "#fb923c"
+  },
+
+  clockCritical: {
+    color: "#f87171"
   },
 
   activeClueRow: {

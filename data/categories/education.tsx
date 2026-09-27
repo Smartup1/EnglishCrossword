@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: 📚 Education
- * 21 palavras.
+ * 46 palavras.
  */
 export const EDUCATION_WORDS: CrosswordWord[] = [
   {
@@ -214,5 +214,255 @@ export const EDUCATION_WORDS: CrosswordWord[] = [
     translation: "papel",
     pronunciation: "/ˈpeɪ.pər/",
     example: "Give me a sheet of paper."
+  },
+  {
+    id: "class",
+    answer: "CLASS",
+    clue: "A group of students learning together.",
+    category: "education",
+    difficulty: "beginner",
+    translation: "turma",
+    pronunciation: "/klæs/",
+    example: "Our class starts at nine."
+  },
+  {
+    id: "lesson",
+    answer: "LESSON",
+    clue: "A period of teaching or learning.",
+    category: "education",
+    difficulty: "beginner",
+    translation: "aula",
+    pronunciation: "/ˈles.ən/",
+    example: "Today's lesson is about animals."
+  },
+  {
+    id: "schoolbag",
+    answer: "SCHOOLBAG",
+    clue: "A bag used to carry school supplies.",
+    category: "education",
+    difficulty: "beginner",
+    translation: "mochila escolar",
+    pronunciation: "/ˈskuːl.bæɡ/",
+    example: "My schoolbag is heavy."
+  },
+  {
+    id: "desk",
+    answer: "DESK",
+    clue: "A table used for studying or writing.",
+    category: "education",
+    difficulty: "beginner",
+    translation: "carteira escolar",
+    pronunciation: "/desk/",
+    example: "My books are on the desk."
+  },
+  {
+    id: "board",
+    answer: "BOARD",
+    clue: "A surface used by a teacher for writing.",
+    category: "education",
+    difficulty: "beginner",
+    translation: "quadro",
+    pronunciation: "/bɔːrd/",
+    example: "Write the answer on the board."
+  },
+  {
+    id: "subject",
+    answer: "SUBJECT",
+    clue: "An area of study taught at school.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "matéria",
+    pronunciation: "/ˈsʌb.dʒekt/",
+    example: "Math is my favorite subject."
+  },
+  {
+    id: "exam",
+    answer: "EXAM",
+    clue: "A test of knowledge or ability.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "prova",
+    pronunciation: "/ɪɡˈzæm/",
+    example: "I have an exam tomorrow."
+  },
+  {
+    id: "homework",
+    answer: "HOMEWORK",
+    clue: "School work done outside class.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "lição de casa",
+    pronunciation: "/ˈhoʊm.wɜːrk/",
+    example: "I finished my homework."
+  },
+  {
+    id: "project",
+    answer: "PROJECT",
+    clue: "A planned piece of work or study.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "projeto",
+    pronunciation: "/ˈprɑː.dʒekt/",
+    example: "Our science project is ready."
+  },
+  {
+    id: "research",
+    answer: "RESEARCH",
+    clue: "A careful study to discover information.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "pesquisa",
+    pronunciation: "/rɪˈsɜːrtʃ/",
+    example: "She is doing research on climate."
+  },
+  {
+    id: "knowledge",
+    answer: "KNOWLEDGE",
+    clue: "Information and understanding gained through learning.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "conhecimento",
+    pronunciation: "/ˈnɑː.lɪdʒ/",
+    example: "Reading increases knowledge."
+  },
+  {
+    id: "academic",
+    answer: "ACADEMIC",
+    clue: "Related to education or study.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "acadêmico",
+    pronunciation: "/ˌæk.əˈdem.ɪk/",
+    example: "He has strong academic skills."
+  },
+  {
+    id: "scholarship",
+    answer: "SCHOLARSHIP",
+    clue: "Financial support given to a student for education.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "bolsa de estudos",
+    pronunciation: "/ˈskɑː.lər.ʃɪp/",
+    example: "She received a scholarship."
+  },
+  {
+    id: "curriculum",
+    answer: "CURRICULUM",
+    clue: "The subjects and content taught in a course.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "currículo escolar",
+    pronunciation: "/kəˈrɪk.jə.ləm/",
+    example: "The curriculum includes science."
+  },
+  {
+    id: "assignment",
+    answer: "ASSIGNMENT",
+    clue: "A task given to a student to complete.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "tarefa escolar",
+    pronunciation: "/əˈsaɪn.mənt/",
+    example: "The assignment is due Friday."
+  },
+  {
+    id: "certificate",
+    answer: "CERTIFICATE",
+    clue: "An official document proving an achievement or qualification.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "certificado",
+    pronunciation: "/sərˈtɪf.ɪ.kət/",
+    example: "She received a language certificate."
+  },
+  {
+    id: "university",
+    answer: "UNIVERSITY",
+    clue: "An institution for higher education.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "universidade",
+    pronunciation: "/ˌjuː.nəˈvɜːr.sə.ti/",
+    example: "He studies at a university."
+  },
+  {
+    id: "college",
+    answer: "COLLEGE",
+    clue: "An institution of higher education.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "faculdade",
+    pronunciation: "/ˈkɑː.lɪdʒ/",
+    example: "She plans to attend college."
+  },
+  {
+    id: "degree",
+    answer: "DEGREE",
+    clue: "An academic qualification awarded after a course of study.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "diploma universitário",
+    pronunciation: "/dɪˈɡriː/",
+    example: "He earned a degree in biology."
+  },
+  {
+    id: "professor",
+    answer: "PROFESSOR",
+    clue: "A teacher at a university or college.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "professor universitário",
+    pronunciation: "/prəˈfes.ər/",
+    example: "The professor explained the topic."
+  },
+  {
+    id: "literature",
+    answer: "LITERATURE",
+    clue: "Written works such as novels, poems, and plays.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "literatura",
+    pronunciation: "/ˈlɪt̬.ər.ə.tʃər/",
+    example: "She studies English literature."
+  },
+  {
+    id: "mathematics",
+    answer: "MATHEMATICS",
+    clue: "The study of numbers, quantities, and shapes.",
+    category: "education",
+    difficulty: "advanced",
+    translation: "matemática",
+    pronunciation: "/ˌmæθ.əˈmæt̬.ɪks/",
+    example: "Mathematics requires practice."
+  },
+  {
+    id: "experiment",
+    answer: "EXPERIMENT",
+    clue: "A scientific test used to discover or demonstrate something.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "experimento",
+    pronunciation: "/ɪkˈsper.ə.mənt/",
+    example: "The students performed an experiment."
+  },
+  {
+    id: "dictionary",
+    answer: "DICTIONARY",
+    clue: "A book or resource that explains words and their meanings.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "dicionário",
+    pronunciation: "/ˈdɪk.ʃə.ner.i/",
+    example: "Use a dictionary to check the word."
+  },
+  {
+    id: "chapter",
+    answer: "CHAPTER",
+    clue: "A main section of a book.",
+    category: "education",
+    difficulty: "intermediate",
+    translation: "capítulo",
+    pronunciation: "/ˈtʃæp.tər/",
+    example: "Read the next chapter."
   },
 ];
