@@ -19,7 +19,7 @@ import {
   streakFor,
   todayKey
 } from "../services/dailyProgress";
-import { playCoinSpent, playKey, playTap, playTick, playTimeUp } from "../services/sounds";
+import { playCoinSpent, playCorrect, playKey, playTap, playTick, playTickUrgent, playTimeUp, playVictory } from "../services/sounds";
 
 // ---------- Economia do jogo (ajuste aqui) ----------
 const XP_PER_WORD = 10;
@@ -34,6 +34,13 @@ export const REVEAL_COST = 5;
 export const TIME_LIMIT_SECONDS = 240; // 4 minutos
 /** Moedas cobradas quando o tempo esgota e a cruzadinha é reembaralhada. */
 export const TIMEOUT_COST = 5;
+/**
+ * Segundos ganhos no relógio a cada palavra concluída DIGITANDO (não conta
+ * quando a palavra é resolvida pelo botão de dica — senão dava pra "trapacear"
+ * pagando moedas pra ganhar tempo de graça). Sem teto: quanto mais palavras
+ * acertar, mais tempo sobra.
+ */
+export const TIME_BONUS_PER_WORD = 15;
 
 // ---------- Tamanho máximo da grade ----------
 // As células têm 34px e a tela do celular comporta ~9 colunas.
@@ -241,15 +248,22 @@ export function useCrosswordGame(
     return () => clearTimeout(id);
   }, [timeLeft, complete, learnedWord]);
 
-  // Tique a cada minuto cheio, e mais rápido nos últimos 5 segundos.
+  // Tique a cada minuto cheio, avisos aos 30/20/10s, e tique afiado a cada
+  // segundo nos últimos 10s (vai ficando mais urgente conforme o tempo acaba).
   useEffect(() => {
     if (timeLeft <= 0) return;
     const isMinuteMark = timeLeft % 60 === 0 && timeLeft !== lastTickMarkRef.current;
     if (isMinuteMark) {
       lastTickMarkRef.current = timeLeft;
       playTick();
-    } else if (timeLeft <= 5) {
+      return;
+    }
+    if (timeLeft <= 30 && timeLeft % 10 === 0) {
       playTick();
+      return;
+    }
+    if (timeLeft <= 10) {
+      playTickUrgent();
     }
   }, [timeLeft]);
 
@@ -349,7 +363,14 @@ export function useCrosswordGame(
             newlyLearnedWordId: word.id
           });
         });
-        if (puzzleDone) tryUnlockNextLevel();
+        if (puzzleDone) {
+          playVictory();
+          tryUnlockNextLevel();
+        } else {
+          playCorrect();
+          // Bônus de tempo só por completar digitando (a dica não dá bônus).
+          setTimeLeft(t => t + TIME_BONUS_PER_WORD * finished.length);
+        }
       }
 
       moveWithinActiveWord(row, col, 1);
@@ -434,7 +455,12 @@ export function useCrosswordGame(
     if (newlyDone.length > 0) {
       markCompleted(newlyDone.map(word => word.id));
       newlyDone.forEach(word => applyProgress({ newlyLearnedWordId: word.id }));
-      if (isPuzzleComplete(next)) tryUnlockNextLevel();
+      if (isPuzzleComplete(next)) {
+        playVictory();
+        tryUnlockNextLevel();
+      } else {
+        playCorrect();
+      }
     }
   }, [activeWord, placedWords, commitGrid, markCompleted, applyProgress, tryUnlockNextLevel]);
 

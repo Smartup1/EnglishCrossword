@@ -211,6 +211,16 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
     }
   }, [game.complete, game.learnedWord]);
 
+  // Ao completar uma palavra, fala ela em inglês automaticamente (o card
+  // também tem um botão 🔊 pra ouvir de novo). Pequeno atraso pra não
+  // atropelar o som de acerto que acabou de tocar.
+  useEffect(() => {
+    if (!game.learnedWord) return;
+    const english = game.learnedWord.english ?? game.learnedWord.answer;
+    const id = setTimeout(() => speakEnglish(english), 350);
+    return () => clearTimeout(id);
+  }, [game.learnedWord]);
+
   // Subiu de nível. Enquanto nenhuma palavra foi concluída, só guardamos o
   // nível carregado do aparelho (evita "level up" falso ao abrir o app).
   const levelBaseline = useRef(game.level);

@@ -13,8 +13,11 @@ const SOUND_SOURCES = {
   tap: require("../assets/sounds/tap.wav"),
   key: require("../assets/sounds/key.wav"),
   tick: require("../assets/sounds/tick.wav"),
+  tickUrgent: require("../assets/sounds/tick_urgent.wav"),
   timeup: require("../assets/sounds/timeup.wav"),
-  coin: require("../assets/sounds/coin.wav")
+  coin: require("../assets/sounds/coin.wav"),
+  correct: require("../assets/sounds/correct.wav"),
+  victory: require("../assets/sounds/victory.wav")
 } as const;
 
 type SoundName = keyof typeof SOUND_SOURCES;
@@ -81,9 +84,14 @@ export function playKey(): void {
   play("key", 0.55);
 }
 
-/** Tique do relógio — a cada minuto e nos últimos segundos. */
+/** Tique do relógio — a cada minuto e nas marcas de aviso (30s/20s/10s). */
 export function playTick(): void {
   play("tick", 0.7);
+}
+
+/** Tique afiado/duplo — cada segundo nos últimos 10s, pra dar urgência. */
+export function playTickUrgent(): void {
+  play("tickUrgent", 0.8);
 }
 
 /** Buzina de falha quando o tempo da cruzadinha esgota. */
@@ -94,4 +102,14 @@ export function playTimeUp(): void {
 /** Moeda gasta (dica ou penalidade de tempo esgotado). */
 export function playCoinSpent(): void {
   play("coin", 0.7);
+}
+
+/** Acerto de uma palavra (toca ao completar cada palavra da cruzadinha). */
+export function playCorrect(): void {
+  play("correct", 0.6);
+}
+
+/** Fanfarra ao completar a cruzadinha inteira. */
+export function playVictory(): void {
+  play("victory", 0.7);
 }

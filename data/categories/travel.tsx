@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: 🌎 Travel
- * 52 palavras.
+ * 80 palavras.
  */
 export const TRAVEL_WORDS: CrosswordWord[] = [
   {
@@ -524,5 +524,285 @@ export const TRAVEL_WORDS: CrosswordWord[] = [
     translation: "chegada",
     pronunciation: "/əˈraɪ.vəl/",
     example: "The arrival time is 3 PM."
+  },
+  {
+    id: "boat",
+    answer: "BOAT",
+    clue: "A small vehicle that travels on water.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "barco",
+    pronunciation: "/boʊt/",
+    example: "We took a boat to the island."
+  },
+  {
+    id: "ship",
+    answer: "SHIP",
+    clue: "A large vehicle that travels on water.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "navio",
+    pronunciation: "/ʃɪp/",
+    example: "The ship is very big."
+  },
+  {
+    id: "taxi",
+    answer: "TAXI",
+    clue: "A car that you pay to take you somewhere.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "táxi",
+    pronunciation: "/ˈtæk.si/",
+    example: "We took a taxi to the hotel."
+  },
+  {
+    id: "subway",
+    answer: "SUBWAY",
+    clue: "An underground train system.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "metrô",
+    pronunciation: "/ˈsʌb.weɪ/",
+    example: "I take the subway to work."
+  },
+  {
+    id: "station",
+    answer: "STATION",
+    clue: "A place where trains or buses stop.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "estação",
+    pronunciation: "/ˈsteɪ.ʃən/",
+    example: "Meet me at the station."
+  },
+  {
+    id: "tourist",
+    answer: "TOURIST",
+    clue: "A person who travels for pleasure.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "turista",
+    pronunciation: "/ˈtʊə.rɪst/",
+    example: "Many tourists visit this city."
+  },
+  {
+    id: "guide",
+    answer: "GUIDE",
+    clue: "A person who shows tourists around.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "guia",
+    pronunciation: "/ɡaɪd/",
+    example: "Our guide explained the history."
+  },
+  {
+    id: "museum",
+    answer: "MUSEUM",
+    clue: "A place where art and history are shown.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "museu",
+    pronunciation: "/mjuːˈziː.əm/",
+    example: "We spent the afternoon at the museum."
+  },
+  {
+    id: "monument",
+    answer: "MONUMENT",
+    clue: "A structure built to remember a person or event.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "monumento",
+    pronunciation: "/ˈmɑːn.jə.mənt/",
+    example: "The monument is in the center."
+  },
+  {
+    id: "temple",
+    answer: "TEMPLE",
+    clue: "A building used for religious worship.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "templo",
+    pronunciation: "/ˈtem.pəl/",
+    example: "We visited an ancient temple."
+  },
+  {
+    id: "desert",
+    answer: "DESERT",
+    clue: "A dry area with little rain.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "deserto",
+    pronunciation: "/ˈdez.ərt/",
+    example: "The desert is very hot."
+  },
+  {
+    id: "jungle",
+    answer: "JUNGLE",
+    clue: "A thick tropical forest.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "selva",
+    pronunciation: "/ˈdʒʌŋ.ɡəl/",
+    example: "They explored the jungle."
+  },
+  {
+    id: "lake",
+    answer: "LAKE",
+    clue: "A large area of water surrounded by land.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "lago",
+    pronunciation: "/leɪk/",
+    example: "We swam in the lake."
+  },
+  {
+    id: "ocean",
+    answer: "OCEAN",
+    clue: "A very large area of salt water.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "oceano",
+    pronunciation: "/ˈoʊ.ʃən/",
+    example: "The ocean is deep and blue."
+  },
+  {
+    id: "coast",
+    answer: "COAST",
+    clue: "The land next to the sea.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "costa",
+    pronunciation: "/koʊst/",
+    example: "We drove along the coast."
+  },
+  {
+    id: "harbor",
+    answer: "HARBOR",
+    clue: "A place where ships can safely stay.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "porto",
+    pronunciation: "/ˈhɑːr.bər/",
+    example: "The ship is in the harbor."
+  },
+  {
+    id: "path",
+    answer: "PATH",
+    clue: "A small road for walking.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "caminho",
+    pronunciation: "/pæθ/",
+    example: "Follow the path through the forest."
+  },
+  {
+    id: "road",
+    answer: "ROAD",
+    clue: "A hard surface for vehicles to drive on.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "estrada",
+    pronunciation: "/roʊd/",
+    example: "The road is long and winding."
+  },
+  {
+    id: "traffic",
+    answer: "TRAFFIC",
+    clue: "Cars and vehicles moving on roads.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "trânsito",
+    pronunciation: "/ˈtræf.ɪk/",
+    example: "There is a lot of traffic today."
+  },
+  {
+    id: "sign",
+    answer: "SIGN",
+    clue: "A board that gives information or directions.",
+    category: "travel",
+    difficulty: "beginner",
+    translation: "placa",
+    pronunciation: "/saɪn/",
+    example: "Look at the road sign."
+  },
+  {
+    id: "compass",
+    answer: "COMPASS",
+    clue: "A tool that shows direction.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "bússola",
+    pronunciation: "/ˈkʌm.pəs/",
+    example: "Use the compass to find north."
+  },
+  {
+    id: "adventure",
+    answer: "ADVENTURE",
+    clue: "An exciting and unusual experience.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "aventura",
+    pronunciation: "/ədˈven.tʃər/",
+    example: "Our trip was a great adventure."
+  },
+  {
+    id: "journey",
+    answer: "JOURNEY",
+    clue: "A long trip from one place to another.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "jornada",
+    pronunciation: "/ˈdʒɜːr.ni/",
+    example: "The journey took five hours."
+  },
+  {
+    id: "departure",
+    answer: "DEPARTURE",
+    clue: "The act of leaving a place.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "partida",
+    pronunciation: "/dɪˈpɑːr.tʃər/",
+    example: "The departure time is 8 AM."
+  },
+  {
+    id: "reservation",
+    answer: "RESERVATION",
+    clue: "An arrangement to keep a room or seat.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "reserva",
+    pronunciation: "/ˌrez.ərˈveɪ.ʃən/",
+    example: "I made a reservation at the hotel."
+  },
+  {
+    id: "currency",
+    answer: "CURRENCY",
+    clue: "The money used in a country.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "moeda",
+    pronunciation: "/ˈkɜːr.ən.si/",
+    example: "What currency do they use here?"
+  },
+  {
+    id: "exchange",
+    answer: "EXCHANGE",
+    clue: "To change money from one currency to another.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "câmbio",
+    pronunciation: "/ɪksˈtʃeɪndʒ/",
+    example: "Where can I exchange money?"
+  },
+  {
+    id: "souvenir",
+    answer: "SOUVENIR",
+    clue: "Something you buy to remember a trip.",
+    category: "travel",
+    difficulty: "intermediate",
+    translation: "lembrança",
+    pronunciation: "/ˌsuː.vəˈnɪər/",
+    example: "I bought a souvenir from the market."
   },
 ];

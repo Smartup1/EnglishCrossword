@@ -80,8 +80,8 @@ export default function CrosswordCell({
 
 const styles = StyleSheet.create({
   cell: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
 
   // Célula que não faz parte da grade
   empty: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     backgroundColor: "transparent"
   },
 

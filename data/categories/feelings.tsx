@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: ❤️ Feelings
- * 18 palavras.
+ * 40 palavras.
  */
 export const FEELINGS_WORDS: CrosswordWord[] = [
   {
@@ -184,5 +184,225 @@ export const FEELINGS_WORDS: CrosswordWord[] = [
     translation: "exercício",
     pronunciation: "/ˈek.sər.saɪz/",
     example: "I do exercise every morning."
+  },
+  {
+    id: "bored",
+    answer: "BORED",
+    clue: "Feeling that something is not interesting.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "entediado",
+    pronunciation: "/bɔːrd/",
+    example: "I am bored at home."
+  },
+  {
+    id: "nervous",
+    answer: "NERVOUS",
+    clue: "Feeling worried or afraid.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "nervoso",
+    pronunciation: "/ˈnɜːr.vəs/",
+    example: "She is nervous about the test."
+  },
+  {
+    id: "calm",
+    answer: "CALM",
+    clue: "Feeling peaceful and relaxed.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "calmo",
+    pronunciation: "/kɑːm/",
+    example: "Stay calm and breathe."
+  },
+  {
+    id: "jealous",
+    answer: "JEALOUS",
+    clue: "Feeling unhappy because of someone else's success.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "ciumento",
+    pronunciation: "/ˈdʒel.əs/",
+    example: "He felt jealous of his friend."
+  },
+  {
+    id: "embarrassed",
+    answer: "EMBARRASSED",
+    clue: "Feeling shy or ashamed.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "envergonhado",
+    pronunciation: "/ɪmˈbær.əst/",
+    example: "I was embarrassed by my mistake."
+  },
+  {
+    id: "confident",
+    answer: "CONFIDENT",
+    clue: "Feeling sure about yourself.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "confiante",
+    pronunciation: "/ˈkɑːn.fɪ.dənt/",
+    example: "She is confident in her skills."
+  },
+  {
+    id: "grateful",
+    answer: "GRATEFUL",
+    clue: "Feeling thankful.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "grato",
+    pronunciation: "/ˈɡreɪt.fəl/",
+    example: "I am grateful for your help."
+  },
+  {
+    id: "afraid",
+    answer: "AFRAID",
+    clue: "Feeling fear.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "com medo",
+    pronunciation: "/əˈfreɪd/",
+    example: "I am afraid of the dark."
+  },
+  {
+    id: "brave",
+    answer: "BRAVE",
+    clue: "Not afraid of danger.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "corajoso",
+    pronunciation: "/breɪv/",
+    example: "The firefighter is brave."
+  },
+  {
+    id: "shy",
+    answer: "SHY",
+    clue: "Feeling nervous with other people.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "tímido",
+    pronunciation: "/ʃaɪ/",
+    example: "He is shy with strangers."
+  },
+  {
+    id: "funny",
+    answer: "FUNNY",
+    clue: "Making people laugh.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "engraçado",
+    pronunciation: "/ˈfʌn.i/",
+    example: "That joke was funny."
+  },
+  {
+    id: "serious",
+    answer: "SERIOUS",
+    clue: "Not joking; important.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "sério",
+    pronunciation: "/ˈsɪə.ri.əs/",
+    example: "This is a serious problem."
+  },
+  {
+    id: "hopeful",
+    answer: "HOPEFUL",
+    clue: "Feeling that good things will happen.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "esperançoso",
+    pronunciation: "/ˈhoʊp.fəl/",
+    example: "She is hopeful about the future."
+  },
+  {
+    id: "disappointed",
+    answer: "DISAPPOINTED",
+    clue: "Feeling sad because something was not as expected.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "decepcionado",
+    pronunciation: "/ˌdɪs.əˈpɔɪn.tɪd/",
+    example: "I was disappointed with the result."
+  },
+  {
+    id: "curious",
+    answer: "CURIOUS",
+    clue: "Wanting to know or learn something.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "curioso",
+    pronunciation: "/ˈkjʊə.ri.əs/",
+    example: "Children are naturally curious."
+  },
+  {
+    id: "patient",
+    answer: "PATIENT",
+    clue: "Able to wait without getting angry.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "paciente",
+    pronunciation: "/ˈpeɪ.ʃənt/",
+    example: "Please be patient with me."
+  },
+  {
+    id: "kind",
+    answer: "KIND",
+    clue: "Nice and helpful to others.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "gentil",
+    pronunciation: "/kaɪnd/",
+    example: "She is always kind to everyone."
+  },
+  {
+    id: "lazy",
+    answer: "LAZY",
+    clue: "Not wanting to work or do anything.",
+    category: "feelings",
+    difficulty: "beginner",
+    translation: "preguiçoso",
+    pronunciation: "/ˈleɪ.zi/",
+    example: "He feels lazy on Sundays."
+  },
+  {
+    id: "energetic",
+    answer: "ENERGETIC",
+    clue: "Full of energy and activity.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "enérgico",
+    pronunciation: "/ˌen.ərˈdʒet.ɪk/",
+    example: "The children are very energetic."
+  },
+  {
+    id: "relaxed",
+    answer: "RELAXED",
+    clue: "Feeling calm and not stressed.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "relaxado",
+    pronunciation: "/rɪˈlækst/",
+    example: "I feel relaxed after a bath."
+  },
+  {
+    id: "confused",
+    answer: "CONFUSED",
+    clue: "Not understanding something clearly.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "confuso",
+    pronunciation: "/kənˈfjuːzd/",
+    example: "I am confused by this question."
+  },
+  {
+    id: "thankful",
+    answer: "THANKFUL",
+    clue: "Feeling that you want to thank someone.",
+    category: "feelings",
+    difficulty: "intermediate",
+    translation: "agradecido",
+    pronunciation: "/ˈθæŋk.fəl/",
+    example: "I am thankful for your support."
   },
 ];

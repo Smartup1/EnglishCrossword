@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: 🍔 Food
- * 27 palavras.
+ * 55 palavras.
  */
 export const FOOD_WORDS: CrosswordWord[] = [
   {
@@ -274,5 +274,285 @@ export const FOOD_WORDS: CrosswordWord[] = [
     translation: "saudável",
     pronunciation: "/ˈhel.θi/",
     example: "Eating vegetables keeps you healthy."
+  },
+  {
+    id: "banana",
+    answer: "BANANA",
+    clue: "A long yellow fruit.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "banana",
+    pronunciation: "/bəˈnæn.ə/",
+    example: "I eat a banana every day."
+  },
+  {
+    id: "orange",
+    answer: "ORANGE",
+    clue: "A round citrus fruit.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "laranja",
+    pronunciation: "/ˈɔːr.ɪndʒ/",
+    example: "The orange is sweet."
+  },
+  {
+    id: "potato",
+    answer: "POTATO",
+    clue: "A round vegetable that grows under the ground.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "batata",
+    pronunciation: "/pəˈteɪ.toʊ/",
+    example: "I like mashed potato."
+  },
+  {
+    id: "tomato",
+    answer: "TOMATO",
+    clue: "A red fruit often used in salads.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "tomate",
+    pronunciation: "/təˈmeɪ.toʊ/",
+    example: "Add tomato to the salad."
+  },
+  {
+    id: "meat",
+    answer: "MEAT",
+    clue: "The flesh of animals used as food.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "carne",
+    pronunciation: "/miːt/",
+    example: "We don't eat much meat."
+  },
+  {
+    id: "soup",
+    answer: "SOUP",
+    clue: "A liquid food made by cooking.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "sopa",
+    pronunciation: "/suːp/",
+    example: "I love tomato soup."
+  },
+  {
+    id: "salad",
+    answer: "SALAD",
+    clue: "A dish of mixed vegetables.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "salada",
+    pronunciation: "/ˈsæl.əd/",
+    example: "She ordered a green salad."
+  },
+  {
+    id: "pizza",
+    answer: "PIZZA",
+    clue: "A flat bread with cheese and toppings.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "pizza",
+    pronunciation: "/ˈpiːt.sə/",
+    example: "We ordered a pizza."
+  },
+  {
+    id: "cake",
+    answer: "CAKE",
+    clue: "A sweet baked dessert.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "bolo",
+    pronunciation: "/keɪk/",
+    example: "She made a chocolate cake."
+  },
+  {
+    id: "butter",
+    answer: "BUTTER",
+    clue: "A yellow food made from milk.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "manteiga",
+    pronunciation: "/ˈbʌt.ər/",
+    example: "Spread butter on the bread."
+  },
+  {
+    id: "honey",
+    answer: "HONEY",
+    clue: "A sweet food made by bees.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "mel",
+    pronunciation: "/ˈhʌn.i/",
+    example: "I put honey in my tea."
+  },
+  {
+    id: "pepper",
+    answer: "PEPPER",
+    clue: "A spice that can be black or hot.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "pimenta",
+    pronunciation: "/ˈpep.ər/",
+    example: "Add some black pepper."
+  },
+  {
+    id: "onion",
+    answer: "ONION",
+    clue: "A vegetable that makes you cry when cut.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "cebola",
+    pronunciation: "/ˈʌn.jən/",
+    example: "Chop the onion carefully."
+  },
+  {
+    id: "garlic",
+    answer: "GARLIC",
+    clue: "A strong-smelling vegetable used in cooking.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "alho",
+    pronunciation: "/ˈɡɑːr.lɪk/",
+    example: "This recipe needs garlic."
+  },
+  {
+    id: "bean",
+    answer: "BEAN",
+    clue: "A small seed eaten as food.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "feijão",
+    pronunciation: "/biːn/",
+    example: "We eat rice and beans."
+  },
+  {
+    id: "pasta",
+    answer: "PASTA",
+    clue: "Food made from flour and water, like spaghetti.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "macarrão",
+    pronunciation: "/ˈpæs.tə/",
+    example: "I love Italian pasta."
+  },
+  {
+    id: "sandwich",
+    answer: "SANDWICH",
+    clue: "Food between two slices of bread.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "sanduíche",
+    pronunciation: "/ˈsæn.wɪtʃ/",
+    example: "I made a cheese sandwich."
+  },
+  {
+    id: "chocolate",
+    answer: "CHOCOLATE",
+    clue: "A sweet brown food made from cocoa.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "chocolate",
+    pronunciation: "/ˈtʃɒk.lət/",
+    example: "She loves dark chocolate."
+  },
+  {
+    id: "ice",
+    answer: "ICE",
+    clue: "Frozen water.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "gelo",
+    pronunciation: "/aɪs/",
+    example: "Put some ice in the glass."
+  },
+  {
+    id: "tea",
+    answer: "TEA",
+    clue: "A hot drink made from leaves.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "chá",
+    pronunciation: "/tiː/",
+    example: "Would you like a cup of tea?"
+  },
+  {
+    id: "yogurt",
+    answer: "YOGURT",
+    clue: "A thick dairy product that is often sweet.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "iogurte",
+    pronunciation: "/ˈjoʊ.ɡɚt/",
+    example: "I eat yogurt for breakfast."
+  },
+  {
+    id: "strawberry",
+    answer: "STRAWBERRY",
+    clue: "A small red fruit with seeds on the outside.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "morango",
+    pronunciation: "/ˈstrɔː.ber.i/",
+    example: "Strawberry ice cream is delicious."
+  },
+  {
+    id: "lemon",
+    answer: "LEMON",
+    clue: "A yellow sour citrus fruit.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "limão",
+    pronunciation: "/ˈlem.ən/",
+    example: "Add lemon juice to the salad."
+  },
+  {
+    id: "grape",
+    answer: "GRAPE",
+    clue: "A small round fruit that grows in bunches.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "uva",
+    pronunciation: "/ɡreɪp/",
+    example: "These grapes are sweet."
+  },
+  {
+    id: "carrot",
+    answer: "CARROT",
+    clue: "An orange vegetable that grows under the ground.",
+    category: "food",
+    difficulty: "beginner",
+    translation: "cenoura",
+    pronunciation: "/ˈkær.ət/",
+    example: "Rabbits like carrots."
+  },
+  {
+    id: "burger",
+    answer: "BURGER",
+    clue: "A sandwich with meat in a bun.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "hambúrguer",
+    pronunciation: "/ˈbɜːr.ɡər/",
+    example: "I ordered a burger and fries."
+  },
+  {
+    id: "fries",
+    answer: "FRIES",
+    clue: "Thin pieces of potato that are fried.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "batatas fritas",
+    pronunciation: "/fraɪz/",
+    example: "Would you like fries with that?"
+  },
+  {
+    id: "spicy",
+    answer: "SPICY",
+    clue: "Having a strong hot flavor.",
+    category: "food",
+    difficulty: "intermediate",
+    translation: "apimentado",
+    pronunciation: "/ˈspaɪ.si/",
+    example: "This sauce is very spicy."
   },
 ];

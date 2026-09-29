@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: 👨‍👩‍👧 Family
- * 17 palavras.
+ * 42 palavras.
  */
 export const FAMILY_WORDS: CrosswordWord[] = [
   {
@@ -174,5 +174,255 @@ export const FAMILY_WORDS: CrosswordWord[] = [
     translation: "presente",
     pronunciation: "/ɡɪft/",
     example: "I bought a gift for my mother."
+  },
+  {
+    id: "grandfather",
+    answer: "GRANDFATHER",
+    clue: "The father of your father or mother.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "avô",
+    pronunciation: "/ˈɡræn.fɑː.ðər/",
+    example: "My grandfather tells great stories."
+  },
+  {
+    id: "grandmother",
+    answer: "GRANDMOTHER",
+    clue: "The mother of your father or mother.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "avó",
+    pronunciation: "/ˈɡræn.mʌð.ər/",
+    example: "My grandmother bakes cookies."
+  },
+  {
+    id: "parents",
+    answer: "PARENTS",
+    clue: "Your mother and father.",
+    category: "family",
+    difficulty: "beginner",
+    translation: "pais",
+    pronunciation: "/ˈpeə.rənts/",
+    example: "My parents are very kind."
+  },
+  {
+    id: "children",
+    answer: "CHILDREN",
+    clue: "Young people who are not adults.",
+    category: "family",
+    difficulty: "beginner",
+    translation: "crianças",
+    pronunciation: "/ˈtʃɪl.drən/",
+    example: "The children are playing outside."
+  },
+  {
+    id: "nephew",
+    answer: "NEPHEW",
+    clue: "The son of your brother or sister.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "sobrinho",
+    pronunciation: "/ˈnef.juː/",
+    example: "My nephew is five years old."
+  },
+  {
+    id: "niece",
+    answer: "NIECE",
+    clue: "The daughter of your brother or sister.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "sobrinha",
+    pronunciation: "/niːs/",
+    example: "My niece loves to dance."
+  },
+  {
+    id: "twin",
+    answer: "TWIN",
+    clue: "One of two children born at the same time.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "gêmeo",
+    pronunciation: "/twɪn/",
+    example: "She has a twin sister."
+  },
+  {
+    id: "relative",
+    answer: "RELATIVE",
+    clue: "A person in your family.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "parente",
+    pronunciation: "/ˈrel.ə.tɪv/",
+    example: "We visited our relatives."
+  },
+  {
+    id: "grandchild",
+    answer: "GRANDCHILD",
+    clue: "The child of your son or daughter.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "neto",
+    pronunciation: "/ˈɡræn.tʃaɪld/",
+    example: "They have one grandchild."
+  },
+  {
+    id: "grandson",
+    answer: "GRANDSON",
+    clue: "The son of your son or daughter.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "neto",
+    pronunciation: "/ˈɡræn.sʌn/",
+    example: "My grandson is very smart."
+  },
+  {
+    id: "granddaughter",
+    answer: "GRANDDAUGHTER",
+    clue: "The daughter of your son or daughter.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "neta",
+    pronunciation: "/ˈɡræn.dɔː.tər/",
+    example: "My granddaughter draws well."
+  },
+  {
+    id: "stepfather",
+    answer: "STEPFATHER",
+    clue: "The husband of your mother who is not your father.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "padrasto",
+    pronunciation: "/ˈstep.fɑː.ðər/",
+    example: "My stepfather is a doctor."
+  },
+  {
+    id: "stepmother",
+    answer: "STEPMOTHER",
+    clue: "The wife of your father who is not your mother.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "madrasta",
+    pronunciation: "/ˈstep.mʌð.ər/",
+    example: "Her stepmother is kind."
+  },
+  {
+    id: "sibling",
+    answer: "SIBLING",
+    clue: "A brother or a sister.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "irmão/irmã",
+    pronunciation: "/ˈsɪb.lɪŋ/",
+    example: "I have two siblings."
+  },
+  {
+    id: "orphan",
+    answer: "ORPHAN",
+    clue: "A child whose parents are dead.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "órfão",
+    pronunciation: "/ˈɔːr.fən/",
+    example: "The orphan found a new home."
+  },
+  {
+    id: "bride",
+    answer: "BRIDE",
+    clue: "A woman on her wedding day.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "noiva",
+    pronunciation: "/braɪd/",
+    example: "The bride looked beautiful."
+  },
+  {
+    id: "groom",
+    answer: "GROOM",
+    clue: "A man on his wedding day.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "noivo",
+    pronunciation: "/ɡruːm/",
+    example: "The groom was nervous."
+  },
+  {
+    id: "marriage",
+    answer: "MARRIAGE",
+    clue: "The legal relationship between husband and wife.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "casamento",
+    pronunciation: "/ˈmær.ɪdʒ/",
+    example: "They have a happy marriage."
+  },
+  {
+    id: "divorce",
+    answer: "DIVORCE",
+    clue: "The legal end of a marriage.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "divórcio",
+    pronunciation: "/dɪˈvɔːrs/",
+    example: "They decided to get a divorce."
+  },
+  {
+    id: "widow",
+    answer: "WIDOW",
+    clue: "A woman whose husband has died.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "viúva",
+    pronunciation: "/ˈwɪd.oʊ/",
+    example: "The widow lives alone."
+  },
+  {
+    id: "widower",
+    answer: "WIDOWER",
+    clue: "A man whose wife has died.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "viúvo",
+    pronunciation: "/ˈwɪd.oʊ.ər/",
+    example: "The widower misses his wife."
+  },
+  {
+    id: "ancestor",
+    answer: "ANCESTOR",
+    clue: "A person in your family from long ago.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "ancestral",
+    pronunciation: "/ˈæn.ses.tər/",
+    example: "My ancestors came from Italy."
+  },
+  {
+    id: "generation",
+    answer: "GENERATION",
+    clue: "All the people born around the same time.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "geração",
+    pronunciation: "/ˌdʒen.əˈreɪ.ʃən/",
+    example: "This generation uses technology a lot."
+  },
+  {
+    id: "adopt",
+    answer: "ADOPT",
+    clue: "To take a child into your family legally.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "adotar",
+    pronunciation: "/əˈdɑːpt/",
+    example: "They decided to adopt a child."
+  },
+  {
+    id: "pregnancy",
+    answer: "PREGNANCY",
+    clue: "The condition of expecting a baby.",
+    category: "family",
+    difficulty: "intermediate",
+    translation: "gravidez",
+    pronunciation: "/ˈpreɡ.nən.si/",
+    example: "Her pregnancy is going well."
   },
 ];

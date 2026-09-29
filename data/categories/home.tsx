@@ -2,7 +2,7 @@ import { CrosswordWord } from "../../types/crossword";
 
 /**
  * Categoria: 🏠 Home
- * 46 palavras.
+ * 70 palavras.
  */
 export const HOME_WORDS: CrosswordWord[] = [
   {
@@ -464,5 +464,235 @@ export const HOME_WORDS: CrosswordWord[] = [
     translation: "relógio",
     pronunciation: "/klɑːk/",
     example: "The clock is on the wall."
+  },
+  {
+    id: "sofa",
+    answer: "SOFA",
+    clue: "A long soft seat for more than one person.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "sofá",
+    pronunciation: "/ˈsoʊ.fə/",
+    example: "We sat on the sofa."
+  },
+  {
+    id: "shelf",
+    answer: "SHELF",
+    clue: "A flat board used to put things on.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "prateleira",
+    pronunciation: "/ʃelf/",
+    example: "The books are on the shelf."
+  },
+  {
+    id: "drawer",
+    answer: "DRAWER",
+    clue: "A box that slides in and out of furniture.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "gaveta",
+    pronunciation: "/drɔːr/",
+    example: "Put the socks in the drawer."
+  },
+  {
+    id: "key",
+    answer: "KEY",
+    clue: "You use it to open a door.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "chave",
+    pronunciation: "/kiː/",
+    example: "I lost my house key."
+  },
+  {
+    id: "floor",
+    answer: "FLOOR",
+    clue: "The surface you walk on inside a building.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "chão",
+    pronunciation: "/flɔːr/",
+    example: "Don't sit on the floor."
+  },
+  {
+    id: "wall",
+    answer: "WALL",
+    clue: "The side of a room.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "parede",
+    pronunciation: "/wɔːl/",
+    example: "Hang the picture on the wall."
+  },
+  {
+    id: "roof",
+    answer: "ROOF",
+    clue: "The top covering of a building.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "telhado",
+    pronunciation: "/ruːf/",
+    example: "The roof needs repair."
+  },
+  {
+    id: "stairs",
+    answer: "STAIRS",
+    clue: "Steps that allow you to go up or down.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "escadas",
+    pronunciation: "/sterz/",
+    example: "Be careful on the stairs."
+  },
+  {
+    id: "garage",
+    answer: "GARAGE",
+    clue: "A place to keep a car.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "garagem",
+    pronunciation: "/ɡəˈrɑːʒ/",
+    example: "The car is in the garage."
+  },
+  {
+    id: "balcony",
+    answer: "BALCONY",
+    clue: "A platform outside a building with a railing.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "varanda",
+    pronunciation: "/ˈbæl.kə.ni/",
+    example: "We have breakfast on the balcony."
+  },
+  {
+    id: "fridge",
+    answer: "FRIDGE",
+    clue: "A machine that keeps food cold.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "geladeira",
+    pronunciation: "/frɪdʒ/",
+    example: "Put the milk in the fridge."
+  },
+  {
+    id: "oven",
+    answer: "OVEN",
+    clue: "A machine used for baking or roasting.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "forno",
+    pronunciation: "/ˈʌv.ən/",
+    example: "Bake the cake in the oven."
+  },
+  {
+    id: "sink",
+    answer: "SINK",
+    clue: "A basin with taps for washing.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "pia",
+    pronunciation: "/sɪŋk/",
+    example: "Wash the dishes in the sink."
+  },
+  {
+    id: "shower",
+    answer: "SHOWER",
+    clue: "A place where you wash your body with water.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "chuveiro",
+    pronunciation: "/ˈʃaʊ.ər/",
+    example: "I take a shower every morning."
+  },
+  {
+    id: "toilet",
+    answer: "TOILET",
+    clue: "A bowl used for waste.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "vaso sanitário",
+    pronunciation: "/ˈtɔɪ.lət/",
+    example: "The toilet is broken."
+  },
+  {
+    id: "wardrobe",
+    answer: "WARDROBE",
+    clue: "A tall cupboard for hanging clothes.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "guarda-roupa",
+    pronunciation: "/ˈwɔːr.droʊb/",
+    example: "Hang your coat in the wardrobe."
+  },
+  {
+    id: "vacuum",
+    answer: "VACUUM",
+    clue: "A machine used to clean floors.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "aspirador",
+    pronunciation: "/ˈvæk.juːm/",
+    example: "I need to vacuum the carpet."
+  },
+  {
+    id: "broom",
+    answer: "BROOM",
+    clue: "A tool used for sweeping the floor.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "vassoura",
+    pronunciation: "/bruːm/",
+    example: "Get the broom and sweep."
+  },
+  {
+    id: "bucket",
+    answer: "BUCKET",
+    clue: "A container with a handle for carrying liquids.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "balde",
+    pronunciation: "/ˈbʌk.ɪt/",
+    example: "Fill the bucket with water."
+  },
+  {
+    id: "plant",
+    answer: "PLANT",
+    clue: "A living thing that grows in soil.",
+    category: "home",
+    difficulty: "beginner",
+    translation: "planta",
+    pronunciation: "/plænt/",
+    example: "Water the plant every day."
+  },
+  {
+    id: "fence",
+    answer: "FENCE",
+    clue: "A barrier around a garden or house.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "cerca",
+    pronunciation: "/fens/",
+    example: "The dog jumped over the fence."
+  },
+  {
+    id: "mailbox",
+    answer: "MAILBOX",
+    clue: "A box where letters are delivered.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "caixa de correio",
+    pronunciation: "/ˈmeɪl.bɑːks/",
+    example: "Check the mailbox for letters."
+  },
+  {
+    id: "doorbell",
+    answer: "DOORBELL",
+    clue: "A button that rings when someone visits.",
+    category: "home",
+    difficulty: "intermediate",
+    translation: "campainha",
+    pronunciation: "/ˈdɔːr.bel/",
+    example: "Someone is ringing the doorbell."
   },
 ];
