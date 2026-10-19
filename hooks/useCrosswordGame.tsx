@@ -80,7 +80,9 @@ function indexInWord(word: PlacedWord, row: number, col: number): number {
 export function useCrosswordGame(
   words: CrosswordWord[] = ALL_WORDS,
   maxWords = 6,
-  levelContext?: LevelContext
+  levelContext?: LevelContext,
+  // true = relógio parado (ex.: a Lexi está na tela)
+  paused = false
 ) {
   // Cada vez que a tela do jogo abre, sorteia palavras e cruzamentos novos.
   // shuffleSeed muda quando o tempo esgota (ver mais abaixo), forçando uma
@@ -243,10 +245,10 @@ export function useCrosswordGame(
   // Contagem regressiva: pausa enquanto o card de palavra aprendida está
   // aberto (Modal por cima da tela) ou depois que o jogador já venceu.
   useEffect(() => {
-    if (complete || learnedWord || timeLeft <= 0) return;
+    if (complete || learnedWord || paused || timeLeft <= 0) return;
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
-  }, [timeLeft, complete, learnedWord]);
+  }, [timeLeft, complete, learnedWord, paused]);
 
   // Tique a cada minuto cheio, avisos aos 30/20/10s, e tique afiado a cada
   // segundo nos últimos 10s (vai ficando mais urgente conforme o tempo acaba).

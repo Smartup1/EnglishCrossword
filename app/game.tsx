@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
+  BackHandler,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import CrosswordGrid from "../components/CrosswordGrid";
 import ClueList from "../components/ClueList";
@@ -17,6 +17,8 @@ import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
 import Confetti from "../components/Confetti";
 import AchievementToast, { Toast } from "../components/AchievementToast";
 import WordLearnedCard from "../components/WordLearnedCard";
+import LexiModal from "../components/LexiModal";
+import CatWave from "../components/CatWave";
 import { useCrosswordGame, LevelContext } from "../hooks/useCrosswordGame";
 import { PlacedWord } from "../types/crossword";
 import { CategoryKey, getCategoryInfo, getCategoryLevelWords, getWordsByCategory } from "../data/words";
@@ -80,7 +82,11 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
       ? { categoryKey, level: activeLevel, totalLevels: categoryInfo.levels.length }
       : undefined;
 
-  const game = useCrosswordGame(words, 6, levelContext);
+  // A Lexi aparece quando o jogador perde (tempo esgotado) ou tenta sair.
+  // Enquanto ela está na tela, o relógio fica parado.
+  const [lexi, setLexi] = useState<"timeup" | "broke" | "leave" | null>(null);
+
+  const game = useCrosswordGame(words, 6, levelContext, lexi !== null);
 
   // Terminou o último nível da categoria (não há mais o que desbloquear).
   const categoryCompleted = !!levelContext && levelContext.level >= levelContext.totalLevels;
@@ -257,18 +263,35 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
   // Tempo esgotado, mas o jogador tinha moedas: a cruzadinha foi reembaralhada.
   useEffect(() => {
     if (game.timeUpEvent === 0) return;
-    notify("⏳ TEMPO ESGOTADO!", `Cruzadinha reembaralhada  ·  -${game.timeoutCost} 🪙`);
+    setLexi("timeup");
   }, [game.timeUpEvent]);
 
-  // Tempo esgotado e sem moedas pra pagar a reembaralhada: volta pro início.
+  // Tempo esgotado e sem moedas pra pagar a reembaralhada: a Lexi avisa e
+  // o botão leva o jogador de volta ao início.
   useEffect(() => {
     if (game.sentHomeEvent === 0) return;
-    Alert.alert(
-      "⏳ Tempo esgotado!",
-      `Você não tem ${game.timeoutCost} 🪙 pra tentar de novo. Volte quando tiver moedas.`,
-      [{ text: "OK", onPress: () => router.replace("/") }]
-    );
+    setLexi("broke");
   }, [game.sentHomeEvent]);
+
+  // Saída: botão ‹ do cabeçalho e botão "voltar" do Android. Cruzadinha já
+  // completa sai direto; no meio do jogo, a Lexi pergunta antes.
+  const askLeave = useCallback(() => {
+    if (game.complete) {
+      router.back();
+      return;
+    }
+    setLexi("leave");
+  }, [game.complete, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (game.complete) return false;
+      setLexi("leave");
+      return true;
+    });
+    return () => sub.remove();
+  }, [game.complete]);
+
 
   // Libera os avisos guardados quando o card da palavra não está na tela.
   useEffect(() => {
@@ -289,12 +312,15 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
 
   return (
     <View style={styles.container}>
+      {/* No iOS, o gesto de arrastar para voltar pularia a Lexi: só vale depois de completar */}
+      <Stack.Screen options={{ gestureEnabled: game.complete }} />
+
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.headerButton}
-          onPress={() => router.back()}
+          onPress={askLeave}
         >
           <Text style={styles.back}>‹</Text>
         </TouchableOpacity>
@@ -350,6 +376,7 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
         {/* COMPLETE */}
         {game.complete && (
           <>
+          <CatWave size={220} />
           <View style={styles.completeBox}>
             <Text style={styles.completeEmoji}>
               {categoryCompleted ? "🏆" : "🎉"}
@@ -522,6 +549,31 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
       <WordLearnedCard
         word={game.learnedWord}
         onDismiss={handleDismissLearned}
+      />
+
+      {/* A LEXI: derrota e saída */}
+      <LexiModal
+        visible={lexi === "timeup"}
+        title="Tempo esgotado!"
+        message={`A cruzadinha foi reembaralhada e custou ${game.timeoutCost} 🪙. A Lexi acredita em você!`}
+        primary={{ label: "TENTAR DE NOVO", onPress: () => setLexi(null) }}
+        onRequestClose={() => setLexi(null)}
+      />
+      <LexiModal
+        visible={lexi === "broke"}
+        title="Tempo esgotado!"
+        message={`Você não tem ${game.timeoutCost} 🪙 pra tentar de novo. Volte quando tiver moedas.`}
+        primary={{ label: "VOLTAR AO INÍCIO", onPress: () => router.replace("/") }}
+        onRequestClose={() => router.replace("/")}
+      />
+      <LexiModal
+        visible={lexi === "leave"}
+        mood="wave"
+        title="Já vai embora?"
+        message="Sua cruzadinha atual vai ser perdida. A Lexi vai sentir sua falta!"
+        primary={{ label: "CONTINUAR JOGANDO", onPress: () => setLexi(null) }}
+        secondary={{ label: "Sair mesmo assim", onPress: () => router.back() }}
+        onRequestClose={() => setLexi(null)}
       />
 
       {/* CONFETES E AVISOS (por cima de tudo, não bloqueiam toques) */}

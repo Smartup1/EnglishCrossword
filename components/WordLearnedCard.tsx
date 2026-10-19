@@ -1,6 +1,7 @@
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { PlacedWord } from "../types/crossword";
 import Confetti from "./Confetti";
+import CatLaugh from "./CatLaugh";
 import { speakEnglish, stopSpeaking } from "../services/speech";
 
 type Props = {
@@ -36,6 +37,7 @@ export default function WordLearnedCard({ word, onDismiss }: Props) {
     <Modal transparent animationType="fade" visible={!!word} onRequestClose={dismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
+          <CatLaugh width={200} />
           <Text style={styles.badge}>✓ PALAVRA COMPLETA +10 XP</Text>
           {/* As duas línguas, sempre na mesma ordem, não importa a direção do jogo */}
           <View style={styles.wordRow}>
