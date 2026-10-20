@@ -20,7 +20,8 @@ import WordLearnedCard from "../components/WordLearnedCard";
 import LexiModal from "../components/LexiModal";
 import CatWave from "../components/CatWave";
 import { useCrosswordGame, LevelContext } from "../hooks/useCrosswordGame";
-import { PlacedWord } from "../types/crossword";
+import { CrosswordWord, PlacedWord } from "../types/crossword";
+import { loadCustomWords, toCrosswordWords } from "../services/customWords";
 import { CategoryKey, getCategoryInfo, getCategoryLevelWords, getWordsByCategory } from "../data/words";
 import { parseMode, prepareWords } from "../game/wordModes";
 import { speakEnglish } from "../services/speech";
@@ -46,11 +47,29 @@ export default function GameScreen() {
     level?: string;
   }>();
   const [round, setRound] = useState(0);
+  // Palavras do jogador ("Minhas palavras"), lidas antes de sortear a cruzadinha.
+  const [customWords, setCustomWords] = useState<CrosswordWord[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadCustomWords().then(list => {
+      if (!cancelled) setCustomWords(toCrosswordWords(list));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const key = `${mode ?? ""}|${category ?? ""}|${level ?? ""}|${round}`;
-  return <GameRound key={key} onNextRound={() => setRound(r => r + 1)} />;
+  if (customWords === null) return <View style={{ flex: 1, backgroundColor: "#101522" }} />;
+  return <GameRound key={key} customWords={customWords} onNextRound={() => setRound(r => r + 1)} />;
 }
 
-function GameRound({ onNextRound }: { onNextRound: () => void }) {
+function GameRound({
+  onNextRound,
+  customWords
+}: {
+  onNextRound: () => void;
+  customWords: CrosswordWord[];
+}) {
   const router = useRouter();
   // Direção da tradução, categoria e nível (dentro da categoria) escolhidos
   // na tela inicial. category/level vazios ou ausentes = todas as categorias,
@@ -74,8 +93,9 @@ function GameRound({ onNextRound }: { onNextRound: () => void }) {
       categoryKey && activeLevel
         ? getCategoryLevelWords(categoryKey, activeLevel)
         : getWordsByCategory(categoryKey);
-    return prepareWords(pool, parseMode(mode));
-  }, [mode, categoryKey, activeLevel]);
+    // As palavras do jogador vêm primeiro: se repetirem uma do banco, a dele vale.
+    return prepareWords([...customWords, ...pool], parseMode(mode));
+  }, [mode, categoryKey, activeLevel, customWords]);
 
   const levelContext: LevelContext | undefined =
     categoryKey && activeLevel && categoryInfo

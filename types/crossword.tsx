@@ -23,6 +23,14 @@ export type CrosswordWord = {
   portuguese?: string;
   /** Idioma da pista. "pt" = vê português e responde em inglês. */
   clueLang?: ClueLang;
+  /** Palavra adicionada pelo jogador ("Minhas palavras"). */
+  custom?: boolean;
+  /** Forma em inglês como o jogador digitou (ex.: "ice cream"), usada na exibição. */
+  displayEnglish?: string;
+  /** Entra primeiro no sorteio de cada cruzadinha (palavras do jogador). */
+  priority?: boolean;
+  /** Agrupa as duas direções da mesma palavra (car→carro e carro→car). */
+  groupId?: string;
 };
 
 /** A word after the generator has assigned it a fixed position. */

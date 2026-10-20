@@ -19,7 +19,8 @@ const CATEGORY_PT: Record<string, string> = {
   feelings: "sentimentos",
   technology: "tecnologia",
   business: "negócios",
-  movies: "filmes"
+  movies: "filmes",
+  custom: "minhas palavras"
 };
 
 export default function WordLearnedCard({ word, onDismiss }: Props) {

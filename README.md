@@ -30,6 +30,20 @@ A cada vez que o jogador entra no jogo, **as palavras e os cruzamentos são sort
 
 ---
 
+# ➕ Minhas palavras
+
+Na tela inicial, o botão **➕ Minhas palavras** abre uma janela para adicionar uma palavra em inglês e a tradução em português. Não conferimos a tradução: confiamos em quem digitou.
+
+* A palavra é salva no aparelho e aparece em **toda cruzadinha** (qualquer categoria ou nível), com **prioridade**: até metade das palavras de cada cruzadinha (3 de 6) vêm da lista do jogador, sorteadas a cada rodada.
+* No modo **🔀 MISTO** ela entra **nos dois sentidos** na mesma cruzadinha (`car → carro` e `carro → car`). Nos modos PT→EN e EN→PT segue a direção escolhida, como as outras palavras.
+* Validação: cada palavra precisa ter de 2 a 13 letras (espaços e acentos não contam), sem números, sem repetir uma já adicionada e sem ficar igual nos dois idiomas (ex.: `hotel`).
+* Se a mesma palavra já existir no banco do jogo, vale a versão do jogador.
+* As duas direções contam como **uma** palavra aprendida.
+
+Arquivos: `services/customWords.tsx` (validação e armazenamento), `components/CustomWordsModal.tsx` (tela), `game/wordModes.tsx` (direções) e `game/crosswordGenerator.tsx` (`priorityLimit`).
+
+---
+
 # ✅ Funcionalidades atuais
 
 * Cruzadinha gerada automaticamente, **diferente a cada partida**

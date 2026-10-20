@@ -13,6 +13,8 @@ import {
 } from "../services/dailyProgress";
 import { DEFAULT_MODE, GameMode } from "../game/wordModes";
 import { CATEGORIES, CategoryKey } from "../data/words";
+import CustomWordsModal from "../components/CustomWordsModal";
+import { loadCustomWords } from "../services/customWords";
 
 const MODES: { key: GameMode; label: string; sub: string }[] = [
   { key: "pt-en", label: "🇧🇷 → 🇺🇸", sub: "PT → EN" },
@@ -33,6 +35,9 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<CategoryKey | undefined>(undefined);
   // Nível dentro da categoria escolhida (irrelevante quando category é undefined = "Todas").
   const [level, setLevel] = useState(1);
+  // "Minhas palavras": janela de adicionar + quantas o jogador já tem.
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customCount, setCustomCount] = useState(0);
 
   const categoryInfo = category ? CATEGORIES.find(c => c.key === category) : undefined;
   const unlockedLevel = category ? getUnlockedLevel(progress, category) : 1;
@@ -70,6 +75,9 @@ export default function HomeScreen() {
       loadProgress().then(loaded => {
         if (!cancelled) setProgress(loaded);
       });
+      loadCustomWords().then(list => {
+        if (!cancelled) setCustomCount(list.length);
+      });
       return () => {
         cancelled = true;
       };
@@ -81,6 +89,17 @@ export default function HomeScreen() {
       <Text style={styles.logo}>ENGLISH</Text>
       <Text style={styles.title}>CROSSWORD</Text>
       <Text style={styles.subtitle}>Aprenda inglês. Uma palavra por vez.</Text>
+
+      <TouchableOpacity activeOpacity={0.8} style={styles.customPill} onPress={() => setCustomOpen(true)}>
+        <Text style={styles.customPillText}>
+          ➕ Minhas palavras{customCount > 0 ? ` · ${customCount}` : ""}
+        </Text>
+      </TouchableOpacity>
+      <CustomWordsModal
+        visible={customOpen}
+        onClose={() => setCustomOpen(false)}
+        onCountChange={setCustomCount}
+      />
 
       <Text style={styles.modeTitle}>TRADUZIR</Text>
       <View style={styles.modes}>
@@ -183,6 +202,8 @@ const styles = StyleSheet.create({
   logo:{fontSize:18,fontWeight:"900",letterSpacing:6,color:"#7dd3fc"},
   title:{fontSize:38,fontWeight:"900",letterSpacing:2,color:"#fff",marginTop:4},
   subtitle:{color:"#94a3b8",marginTop:12,fontSize:15},
+  customPill:{marginTop:14,paddingVertical:8,paddingHorizontal:16,borderRadius:20,borderWidth:1,borderColor:"#7dd3fc",backgroundColor:"#0c2a3d"},
+  customPillText:{color:"#7dd3fc",fontSize:13,fontWeight:"800"},
   modeTitle:{color:"#64748b",fontSize:11,fontWeight:"800",letterSpacing:2,marginTop:40},
   modes:{flexDirection:"row",gap:10,width:"100%",marginTop:10},
   modeChip:{flex:1,alignItems:"center",paddingVertical:12,borderRadius:14,borderWidth:1,borderColor:"#334155",backgroundColor:"#182033"},

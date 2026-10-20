@@ -41,6 +41,11 @@ export type GenerateOptions = {
   maxRows?: number;
   /** Fonte de aleatoriedade (útil em testes). Default Math.random. */
   rng?: () => number;
+  /**
+   * Quantas palavras com `priority` (as do jogador) entram em CADA cruzadinha,
+   * no máximo. Elas são sorteadas primeiro; o resto vem do banco. Default 0.
+   */
+  priorityLimit?: number;
 };
 
 function cellKey(row: number, col: number): string {
@@ -260,6 +265,28 @@ function sample<T>(items: T[], count: number, rng: () => number): T[] {
 }
 
 /**
+ * Sorteia até `limit` palavras prioritárias. Palavras do mesmo grupo (as duas
+ * direções da mesma palavra) entram juntas quando há espaço; se só sobra uma
+ * vaga, entra uma delas.
+ */
+export function pickPriority(pool: CrosswordWord[], limit: number, rng: () => number): CrosswordWord[] {
+  if (limit <= 0 || pool.length === 0) return [];
+  const groups = new Map<string, CrosswordWord[]>();
+  for (const word of pool) {
+    const key = word.groupId ?? word.id;
+    groups.set(key, [...(groups.get(key) ?? []), word]);
+  }
+  const order = sample(Array.from(groups.values()), groups.size, rng);
+  const picked: CrosswordWord[] = [];
+  for (const group of order) {
+    const room = limit - picked.length;
+    if (room <= 0) break;
+    picked.push(...(group.length <= room ? group : sample(group, room, rng)));
+  }
+  return picked;
+}
+
+/**
  * Generates a crossword puzzle from a pool of candidate words.
  *
  * Modo padrão (random = false): estratégia gulosa e determinística original —
@@ -307,6 +334,9 @@ export function generateCrossword(
   // couberem favorecia palavras fáceis de cruzar e quase eliminava as curtas.)
   // Se o grupo sorteado não couber inteiro, sorteia outro.
   const sampleSize = target;
+  const priorityPool = usable.filter(word => word.priority);
+  const regularPool = priorityPool.length > 0 ? usable.filter(word => !word.priority) : usable;
+  const priorityLimit = Math.min(options.priorityLimit ?? 0, target);
   const attempts = options.attempts ?? 150;
   const wantedSuccesses = 3;
 
@@ -315,7 +345,8 @@ export function generateCrossword(
 
   for (let attempt = 0; attempt < attempts && successes.length < wantedSuccesses; attempt++) {
     // Palavras longas primeiro (ancoram melhor), com desempate sorteado.
-    const ordered = sample(usable, sampleSize, rng).sort(
+    const must = pickPriority(priorityPool, priorityLimit, rng);
+    const ordered = [...must, ...sample(regularPool, Math.max(0, sampleSize - must.length), rng)].sort(
       (a, b) => b.answer.length - a.answer.length || rng() - 0.5
     );
     const layout = layoutOnce(ordered, limits);

@@ -13,6 +13,14 @@ export type GameMode = "pt-en" | "en-pt" | "mixed";
 
 export const DEFAULT_MODE: GameMode = "pt-en";
 
+/** Sufixo do id da versão invertida de uma palavra do jogador. */
+export const TWIN_SUFFIX = "~inv";
+
+/** Id "de verdade" da palavra (tira o sufixo da versão invertida). */
+export function baseWordId(id: string): string {
+  return id.endsWith(TWIN_SUFFIX) ? id.slice(0, -TWIN_SUFFIX.length) : id;
+}
+
 export function parseMode(value: string | string[] | undefined): GameMode {
   const v = Array.isArray(value) ? value[0] : value;
   return v === "pt-en" || v === "en-pt" || v === "mixed" ? v : DEFAULT_MODE;
@@ -53,23 +61,40 @@ export function prepareWords(words: CrosswordWord[], mode: GameMode): CrosswordW
     const portuguese = word.translation?.trim();
     if (!portuguese) continue;
 
-    const english = word.answer.toLowerCase();
+    const english = (word.displayEnglish ?? word.answer).toLowerCase();
 
-    const clueLang: ClueLang =
+    // Palavras do jogador entram nas DUAS direções no modo misto (car→carro e
+    // carro→car). Nos modos PT→EN e EN→PT seguem a direção escolhida.
+    const sorted: ClueLang =
       mode === "pt-en" ? "pt" : mode === "en-pt" ? "en" : Math.random() < 0.5 ? "pt" : "en";
+    const directions: ClueLang[] =
+      word.custom && mode === "mixed" ? ["pt", "en"] : [sorted];
 
-    const clue = clueLang === "pt" ? portuguese : english;
-    const answer = toGridAnswer(clueLang === "pt" ? word.answer : portuguese);
+    directions.forEach((clueLang, index) => {
+      const clue = clueLang === "pt" ? portuguese : english;
+      const answer = toGridAnswer(clueLang === "pt" ? word.answer : portuguese);
 
-    if (answer.length < 2) continue;
-    if (toGridAnswer(clue) === answer) continue; // cognato: pista = resposta
+      if (answer.length < 2) return;
+      if (toGridAnswer(clue) === answer) return; // cognato: pista = resposta
 
-    const clueKey = `${clueLang}:${toGridAnswer(clue)}`;
-    if (usedClues.has(clueKey) || usedAnswers.has(answer)) continue;
-    usedClues.add(clueKey);
-    usedAnswers.add(answer);
+      const clueKey = `${clueLang}:${toGridAnswer(clue)}`;
+      if (usedClues.has(clueKey) || usedAnswers.has(answer)) return;
+      usedClues.add(clueKey);
+      usedAnswers.add(answer);
 
-    prepared.push({ ...word, clue, answer, english, portuguese, clueLang });
+      prepared.push({
+        ...word,
+        // O gêmeo invertido precisa de id próprio (a grade identifica palavras por id).
+        id: index === 0 ? word.id : `${word.id}${TWIN_SUFFIX}`,
+        clue,
+        answer,
+        english,
+        portuguese,
+        clueLang,
+        priority: word.custom ? true : undefined,
+        groupId: word.custom ? word.id : undefined
+      });
+    });
   }
 
   return prepared;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_WORDS } from "../data/words";
 import { generateCrossword, isPuzzleComplete, isWordComplete } from "../game/crosswordGenerator";
+import { baseWordId } from "../game/wordModes";
 import { Cell, CrosswordWord, Direction, PlacedWord } from "../types/crossword";
 import {
   emptyProgress,
@@ -94,7 +95,9 @@ export function useCrosswordGame(
         maxWords,
         random: true,
         maxCols: MAX_GRID_COLS,
-        maxRows: MAX_GRID_ROWS
+        maxRows: MAX_GRID_ROWS,
+        // Palavras do jogador: até metade da cruzadinha, sorteadas a cada rodada.
+        priorityLimit: Math.ceil(maxWords / 2)
       }),
     [words, maxWords, shuffleSeed]
   );
@@ -152,9 +155,11 @@ export function useCrosswordGame(
   /** Aplica ganhos/gastos NA HORA (síncrono) e salva em segundo plano. */
   const applyProgress = useCallback((delta: ProgressDelta) => {
     const current = progressRef.current;
+    // car→carro e carro→car contam como UMA palavra aprendida.
+    const learnedId = delta.newlyLearnedWordId ? baseWordId(delta.newlyLearnedWordId) : undefined;
     const wordsLearned =
-      delta.newlyLearnedWordId && !current.wordsLearned.includes(delta.newlyLearnedWordId)
-        ? [...current.wordsLearned, delta.newlyLearnedWordId]
+      learnedId && !current.wordsLearned.includes(learnedId)
+        ? [...current.wordsLearned, learnedId]
         : current.wordsLearned;
     const xp = current.xp + (delta.xp ?? 0);
     let next: PlayerProgress = {
