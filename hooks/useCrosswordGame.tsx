@@ -96,8 +96,9 @@ export function useCrosswordGame(
         random: true,
         maxCols: MAX_GRID_COLS,
         maxRows: MAX_GRID_ROWS,
-        // Palavras do jogador: até metade da cruzadinha, sorteadas a cada rodada.
-        priorityLimit: Math.ceil(maxWords / 2)
+        // Palavras do jogador: todas entram já na PRIMEIRA cruzadinha (até o
+        // limite de palavras da partida); o banco só completa o que sobrar.
+        priorityLimit: maxWords
       }),
     [words, maxWords, shuffleSeed]
   );

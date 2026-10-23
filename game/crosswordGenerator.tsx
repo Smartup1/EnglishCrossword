@@ -43,7 +43,8 @@ export type GenerateOptions = {
   rng?: () => number;
   /**
    * Quantas palavras com `priority` (as do jogador) entram em CADA cruzadinha,
-   * no máximo. Elas são sorteadas primeiro; o resto vem do banco. Default 0.
+   * no máximo. Elas entram primeiro (e a grade só é aceita se todas couberem,
+   * quando possível); o resto vem do banco. Default 0.
    */
   priorityLimit?: number;
 };
@@ -344,22 +345,28 @@ export function generateCrossword(
   const successes: { layout: Layout; score: number }[] = [];
 
   for (let attempt = 0; attempt < attempts && successes.length < wantedSuccesses; attempt++) {
-    // Palavras longas primeiro (ancoram melhor), com desempate sorteado.
+    // Palavras do jogador entram PRIMEIRO na grade (ancoram o desenho), depois
+    // as do banco. Dentro de cada grupo, as longas vêm antes (ancoram melhor).
     const must = pickPriority(priorityPool, priorityLimit, rng);
-    const ordered = [...must, ...sample(regularPool, Math.max(0, sampleSize - must.length), rng)].sort(
-      (a, b) => b.answer.length - a.answer.length || rng() - 0.5
-    );
+    const mustIds = new Set(must.map(word => word.id));
+    const byLength = (a: CrosswordWord, b: CrosswordWord) =>
+      b.answer.length - a.answer.length || rng() - 0.5;
+    const rest = sample(regularPool, Math.max(0, sampleSize - must.length), rng);
+    const ordered = [...[...must].sort(byLength), ...rest.sort(byLength)];
     const layout = layoutOnce(ordered, limits);
     if (!layout) continue;
+    const mustPlaced = layout.placed.filter(word => mustIds.has(word.id)).length;
 
     const bounds = boundsOf(layout.occupied);
     const area = (bounds.maxR - bounds.minR + 1) * (bounds.maxC - bounds.minC + 1);
     const score = countCrossings(layout.occupied) * 10 - area * 0.2;
 
-    if (layout.placed.length >= target) {
+    // Sucesso = tudo encaixou E nenhuma palavra do jogador ficou de fora.
+    if (layout.placed.length >= target && mustPlaced === must.length) {
       successes.push({ layout, score });
     } else {
-      const partialScore = layout.placed.length * 1000 + score;
+      // Sem encaixe perfeito, vale mais a grade que usou mais palavras do jogador.
+      const partialScore = mustPlaced * 10000 + layout.placed.length * 1000 + score;
       if (!bestPartial || partialScore > bestPartial.score) {
         bestPartial = { layout, score: partialScore };
       }
