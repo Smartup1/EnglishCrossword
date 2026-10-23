@@ -19,6 +19,7 @@ import AchievementToast, { Toast } from "../components/AchievementToast";
 import WordLearnedCard from "../components/WordLearnedCard";
 import LexiModal from "../components/LexiModal";
 import CatWave from "../components/CatWave";
+import CatSad from "../components/CatSad";
 import { useCrosswordGame, LevelContext } from "../hooks/useCrosswordGame";
 import { CrosswordWord, PlacedWord } from "../types/crossword";
 import { loadCustomWords, toCrosswordWords } from "../services/customWords";
@@ -588,9 +589,9 @@ function GameRound({
       />
       <LexiModal
         visible={lexi === "leave"}
-        mood="wave"
+        art={<CatSad size={200} />}
         title="Já vai embora?"
-        message="Sua cruzadinha atual vai ser perdida. A Lexi vai sentir sua falta!"
+        message="Sua cruzadinha atual vai ser perdida. O gatinho vai sentir sua falta!"
         primary={{ label: "CONTINUAR JOGANDO", onPress: () => setLexi(null) }}
         secondary={{ label: "Sair mesmo assim", onPress: () => router.back() }}
         onRequestClose={() => setLexi(null)}
