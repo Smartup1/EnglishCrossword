@@ -7,19 +7,20 @@ export default function CatSad({ size = 200 }: { size?: number }) {
   const floatY = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
+  const swayX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.parallel([
         Animated.sequence([
           Animated.timing(floatY, {
-            toValue: -18,
-            duration: 1400,
+            toValue: -24,
+            duration: 1500,
             useNativeDriver: true
           }),
           Animated.timing(floatY, {
-            toValue: 10,
-            duration: 1400,
+            toValue: 16,
+            duration: 1500,
             useNativeDriver: true
           }),
           Animated.timing(floatY, {
@@ -30,35 +31,52 @@ export default function CatSad({ size = 200 }: { size?: number }) {
         ]),
         Animated.sequence([
           Animated.timing(tilt, {
-            toValue: -8,
+            toValue: -12,
+            duration: 1800,
+            useNativeDriver: true
+          }),
+          Animated.timing(tilt, {
+            toValue: 7,
             duration: 1700,
             useNativeDriver: true
           }),
           Animated.timing(tilt, {
-            toValue: 4,
-            duration: 1500,
-            useNativeDriver: true
-          }),
-          Animated.timing(tilt, {
             toValue: 0,
-            duration: 1200,
+            duration: 1400,
             useNativeDriver: true
           })
         ]),
         Animated.sequence([
           Animated.timing(scale, {
-            toValue: 0.97,
-            duration: 1300,
+            toValue: 0.92,
+            duration: 1400,
             useNativeDriver: true
           }),
           Animated.timing(scale, {
-            toValue: 1.04,
-            duration: 1600,
+            toValue: 1.08,
+            duration: 1700,
             useNativeDriver: true
           }),
           Animated.timing(scale, {
             toValue: 1,
-            duration: 1200,
+            duration: 1400,
+            useNativeDriver: true
+          })
+        ]),
+        Animated.sequence([
+          Animated.timing(swayX, {
+            toValue: -8,
+            duration: 2000,
+            useNativeDriver: true
+          }),
+          Animated.timing(swayX, {
+            toValue: 8,
+            duration: 2000,
+            useNativeDriver: true
+          }),
+          Animated.timing(swayX, {
+            toValue: 0,
+            duration: 1500,
             useNativeDriver: true
           })
         ])
@@ -68,11 +86,11 @@ export default function CatSad({ size = 200 }: { size?: number }) {
     animation.start();
 
     return () => animation.stop();
-  }, [floatY, tilt, scale]);
+  }, [floatY, tilt, scale, swayX]);
 
   const rotate = tilt.interpolate({
-    inputRange: [-8, 0, 4],
-    outputRange: ["-8deg", "0deg", "4deg"]
+    inputRange: [-12, 0, 7],
+    outputRange: ["-12deg", "0deg", "7deg"]
   });
 
   return (
@@ -84,7 +102,7 @@ export default function CatSad({ size = 200 }: { size?: number }) {
         {
           width: size * 0.77,
           height: size,
-          transform: [{ translateY: floatY }, { rotate }, { scale }]
+          transform: [{ translateY: floatY }, { translateX: swayX }, { rotate }, { scale }]
         }
       ]}
     >
@@ -104,8 +122,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5eefa",
     marginTop: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 }
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4
   }
 });
