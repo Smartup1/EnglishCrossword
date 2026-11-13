@@ -1,0 +1,238 @@
+import { useCallback, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+
+import { emptyProgress, getUnlockedLevel, loadProgress, PlayerProgress } from "../services/progressStorage";
+import {
+  DAILY_GOAL_COINS,
+  DAILY_GOAL_WORDS,
+  dailyWordsFor,
+  goalDoneToday,
+  streakFor,
+  todayKey
+} from "../services/dailyProgress";
+import { DEFAULT_MODE, GameMode } from "../game/wordModes";
+import { CATEGORIES, CategoryKey } from "../data/words";
+import CustomWordsModal from "../components/CustomWordsModal";
+import { loadCustomWords } from "../services/customWords";
+
+const MODES: { key: GameMode; label: string; sub: string }[] = [
+  { key: "pt-en", label: "🇧🇷 → 🇺🇸", sub: "PT → EN" },
+  { key: "en-pt", label: "🇺🇸 → 🇧🇷", sub: "EN → PT" },
+  { key: "mixed", label: "🔀", sub: "MISTO" }
+];
+
+/** "Todas" + cada categoria de data/words.tsx. undefined = sem filtro. */
+const CATEGORY_OPTIONS: { key: CategoryKey | undefined; label: string }[] = [
+  { key: undefined, label: "🔀 Todas" },
+  ...CATEGORIES.map(c => ({ key: c.key, label: c.label }))
+];
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const [progress, setProgress] = useState<PlayerProgress>(emptyProgress);
+  const [mode, setMode] = useState<GameMode>(DEFAULT_MODE);
+  const [category, setCategory] = useState<CategoryKey | undefined>(undefined);
+  // Nível dentro da categoria escolhida (irrelevante quando category é undefined = "Todas").
+  const [level, setLevel] = useState(1);
+  // "Minhas palavras": janela de adicionar + quantas o jogador já tem.
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customCount, setCustomCount] = useState(0);
+
+  const categoryInfo = category ? CATEGORIES.find(c => c.key === category) : undefined;
+  const unlockedLevel = category ? getUnlockedLevel(progress, category) : 1;
+
+  const selectCategory = (key: CategoryKey | undefined) => {
+    setCategory(key);
+    // Ao trocar de categoria, pula direto para o nível mais avançado já liberado
+    // (continuar de onde parou), em vez de sempre voltar ao 1.
+    setLevel(key ? getUnlockedLevel(progress, key) : 1);
+  };
+
+  const play = () =>
+    router.push({
+      pathname: "/game",
+      params: { mode, category: category ?? "", level: category ? String(level) : "" }
+    });
+
+  // Sequência diária e meta do dia
+  const today = todayKey();
+  const streak = streakFor(progress, today);
+  const wordsToday = Math.min(dailyWordsFor(progress, today), DAILY_GOAL_WORDS);
+  const goalDone = goalDoneToday(progress, today);
+  const goalPercent = goalDone ? 100 : Math.round((wordsToday / DAILY_GOAL_WORDS) * 100);
+  const goalHint = goalDone
+    ? "Volte amanhã para manter a sequência!"
+    : streak > 0
+      ? "Cumpra a meta hoje para não perder sua sequência."
+      : `Complete ${DAILY_GOAL_WORDS} palavras hoje e ganhe +${DAILY_GOAL_COINS} 🪙.`;
+
+  // Re-reads progress every time this screen becomes active again, so XP/level
+  // earned in a puzzle show up here right after the player goes back.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      loadProgress().then(loaded => {
+        if (!cancelled) setProgress(loaded);
+      });
+      loadCustomWords().then(list => {
+        if (!cancelled) setCustomCount(list.length);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.logo}>ENGLISH</Text>
+      <Text style={styles.title}>CROSSWORD</Text>
+      <Text style={styles.subtitle}>Aprenda inglês. Uma palavra por vez.</Text>
+
+      <TouchableOpacity activeOpacity={0.8} style={styles.customPill} onPress={() => setCustomOpen(true)}>
+        <Text style={styles.customPillText}>
+          ➕ Minhas palavras{customCount > 0 ? ` · ${customCount}` : ""}
+        </Text>
+      </TouchableOpacity>
+      <CustomWordsModal
+        visible={customOpen}
+        onClose={() => setCustomOpen(false)}
+        onCountChange={setCustomCount}
+      />
+
+      <Text style={styles.modeTitle}>TRADUZIR</Text>
+      <View style={styles.modes}>
+        {MODES.map(m => (
+          <TouchableOpacity
+            key={m.key}
+            activeOpacity={0.8}
+            style={[styles.modeChip, mode === m.key && styles.modeChipActive]}
+            onPress={() => setMode(m.key)}
+          >
+            <Text style={styles.modeLabel}>{m.label}</Text>
+            <Text style={[styles.modeSub, mode === m.key && styles.modeSubActive]}>{m.sub}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.modeTitle}>CATEGORIA</Text>
+      <View style={styles.categoryScroll}>
+        {CATEGORY_OPTIONS.map(c => (
+          <TouchableOpacity
+            key={c.key ?? "all"}
+            activeOpacity={0.8}
+            style={[styles.categoryChip, category === c.key && styles.categoryChipActive]}
+            onPress={() => selectCategory(c.key)}
+          >
+            <Text
+              style={[styles.categoryLabel, category === c.key && styles.categoryLabelActive]}
+            >
+              {c.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Níveis da categoria escolhida: só faz sentido fora do modo "Todas". */}
+      {categoryInfo && (
+        <>
+          <Text style={styles.modeTitle}>NÍVEL</Text>
+          <View style={styles.categoryScroll}>
+            {categoryInfo.levels.map(lvl => {
+              const locked = lvl.level > unlockedLevel;
+              const active = level === lvl.level;
+              return (
+                <TouchableOpacity
+                  key={lvl.level}
+                  activeOpacity={locked ? 1 : 0.8}
+                  disabled={locked}
+                  style={[
+                    styles.levelChip,
+                    active && styles.levelChipActive,
+                    locked && styles.levelChipLocked
+                  ]}
+                  onPress={() => setLevel(lvl.level)}
+                >
+                  <Text style={[styles.levelLabel, active && styles.categoryLabelActive]}>
+                    {locked ? "🔒" : lvl.level}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      )}
+
+      <TouchableOpacity style={styles.playButton} onPress={play}>
+        <Text style={styles.playText}>▶ JOGAR</Text>
+      </TouchableOpacity>
+
+      {/* Meta do dia + sequência (toque para jogar) */}
+      <TouchableOpacity activeOpacity={0.85} style={styles.goalCard} onPress={play}>
+        <View style={styles.goalRow}>
+          <Text style={styles.goalTitle}>
+            {streak > 0
+              ? `🔥 ${streak} ${streak === 1 ? "dia seguido" : "dias seguidos"}`
+              : "🔥 Comece sua sequência"}
+          </Text>
+          <Text style={styles.goalCount}>
+            {goalDone ? "✅ meta cumprida" : `${wordsToday}/${DAILY_GOAL_WORDS} palavras`}
+          </Text>
+        </View>
+
+        <View style={styles.barTrack}>
+          <View style={[styles.barFill, { width: `${goalPercent}%` }, goalDone && styles.barFillDone]} />
+        </View>
+
+        <Text style={styles.goalHint}>{goalHint}</Text>
+      </TouchableOpacity>
+
+      <View style={styles.stats}>
+        <View><Text style={styles.statNumber}>{progress.level}</Text><Text style={styles.statLabel}>NÍVEL</Text></View>
+        <View><Text style={styles.statNumber}>{progress.wordsLearned.length}</Text><Text style={styles.statLabel}>PALAVRAS</Text></View>
+        <View><Text style={styles.statNumber}>{progress.xp}</Text><Text style={styles.statLabel}>XP</Text></View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container:{flex:1,backgroundColor:"#101522",alignItems:"center",justifyContent:"center",padding:24},
+  logo:{fontSize:18,fontWeight:"900",letterSpacing:6,color:"#7dd3fc"},
+  title:{fontSize:38,fontWeight:"900",letterSpacing:2,color:"#fff",marginTop:4},
+  subtitle:{color:"#94a3b8",marginTop:12,fontSize:15},
+  customPill:{marginTop:14,paddingVertical:8,paddingHorizontal:16,borderRadius:20,borderWidth:1,borderColor:"#7dd3fc",backgroundColor:"#0c2a3d"},
+  customPillText:{color:"#7dd3fc",fontSize:13,fontWeight:"800"},
+  modeTitle:{color:"#64748b",fontSize:11,fontWeight:"800",letterSpacing:2,marginTop:40},
+  modes:{flexDirection:"row",gap:10,width:"100%",marginTop:10},
+  modeChip:{flex:1,alignItems:"center",paddingVertical:12,borderRadius:14,borderWidth:1,borderColor:"#334155",backgroundColor:"#182033"},
+  modeChipActive:{borderColor:"#22c55e",backgroundColor:"#12301f"},
+  modeLabel:{fontSize:18},
+  modeSub:{color:"#64748b",fontSize:11,fontWeight:"800",letterSpacing:1,marginTop:4},
+  modeSubActive:{color:"#22c55e"},
+  categoryScroll:{flexDirection:"row",flexWrap:"wrap",gap:8,width:"100%",marginTop:10,justifyContent:"center"},
+  categoryChip:{paddingVertical:9,paddingHorizontal:14,borderRadius:20,borderWidth:1,borderColor:"#334155",backgroundColor:"#182033"},
+  categoryChipActive:{borderColor:"#22c55e",backgroundColor:"#12301f"},
+  categoryLabel:{color:"#94a3b8",fontSize:13,fontWeight:"700"},
+  categoryLabelActive:{color:"#bbf7d0"},
+  levelChip:{width:40,height:40,borderRadius:20,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:"#334155",backgroundColor:"#182033"},
+  levelChipActive:{borderColor:"#7dd3fc",backgroundColor:"#0c2a3d"},
+  levelChipLocked:{opacity:0.45},
+  levelLabel:{color:"#94a3b8",fontSize:14,fontWeight:"800"},
+  playButton:{backgroundColor:"#22c55e",paddingVertical:18,borderRadius:16,width:"100%",alignItems:"center",marginTop:20},
+  playText:{fontSize:20,fontWeight:"900",color:"#052e16",letterSpacing:1},
+  secondary:{borderWidth:1,borderColor:"#334155",paddingVertical:16,borderRadius:16,width:"100%",alignItems:"center",marginTop:12},
+  secondaryText:{fontWeight:"800",color:"#e2e8f0"},
+  goalCard:{width:"100%",backgroundColor:"#182033",borderRadius:16,borderWidth:1,borderColor:"#334155",padding:14,marginTop:12},
+  goalRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
+  goalTitle:{color:"#fb923c",fontWeight:"900",fontSize:15},
+  goalCount:{color:"#e2e8f0",fontWeight:"800",fontSize:12},
+  barTrack:{height:8,borderRadius:4,backgroundColor:"#26324a",marginTop:10,overflow:"hidden"},
+  barFill:{height:8,borderRadius:4,backgroundColor:"#fb923c"},
+  barFillDone:{backgroundColor:"#22c55e"},
+  goalHint:{color:"#94a3b8",fontSize:12,marginTop:8},
+  stats:{flexDirection:"row",gap:38,marginTop:36},
+  statNumber:{fontSize:24,fontWeight:"900",color:"#fff",textAlign:"center"},
+  statLabel:{fontSize:11,fontWeight:"700",letterSpacing:1,color:"#64748b",marginTop:4}
+});

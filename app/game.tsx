@@ -1,0 +1,907 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  BackHandler,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+
+import CrosswordGrid from "../components/CrosswordGrid";
+import ClueList from "../components/ClueList";
+import HiddenKeyboardInput from "../components/HiddenKeyboardInput";
+import Confetti from "../components/Confetti";
+import AchievementToast, { Toast } from "../components/AchievementToast";
+import WordLearnedCard from "../components/WordLearnedCard";
+import LexiModal from "../components/LexiModal";
+import CatWave from "../components/CatWave";
+import CatSad from "../components/CatSad";
+import { useCrosswordGame, LevelContext } from "../hooks/useCrosswordGame";
+import { CrosswordWord, PlacedWord } from "../types/crossword";
+import { loadCustomWords, toCrosswordWords } from "../services/customWords";
+import { CategoryKey, getCategoryInfo, getCategoryLevelWords, getWordsByCategory } from "../data/words";
+import { parseMode, prepareWords } from "../game/wordModes";
+import { speakEnglish } from "../services/speech";
+
+// Ponha true para ver no terminal quando o teclado abre/fecha (diagnóstico).
+const DEBUG_KEYBOARD = false;
+
+function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
+export default function GameScreen() {
+  // Cada rodada é uma tela nova: mudar a chave recria tudo e sorteia outra cruzadinha.
+  // A chave também muda quando mode/category/level mudam (ex.: ao avançar de fase
+  // via router.replace), senão o estado interno (grade, palavras completadas...)
+  // do round anterior ficaria preso.
+  const { mode, category, level } = useLocalSearchParams<{
+    mode?: string;
+    category?: string;
+    level?: string;
+  }>();
+  const [round, setRound] = useState(0);
+  // Palavras do jogador ("Minhas palavras"), lidas antes de sortear a cruzadinha.
+  const [customWords, setCustomWords] = useState<CrosswordWord[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadCustomWords().then(list => {
+      if (!cancelled) setCustomWords(toCrosswordWords(list));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const key = `${mode ?? ""}|${category ?? ""}|${level ?? ""}|${round}`;
+  if (customWords === null) return <View style={{ flex: 1, backgroundColor: "#101522" }} />;
+  return <GameRound key={key} customWords={customWords} onNextRound={() => setRound(r => r + 1)} />;
+}
+
+function GameRound({
+  onNextRound,
+  customWords
+}: {
+  onNextRound: () => void;
+  customWords: CrosswordWord[];
+}) {
+  const router = useRouter();
+  // Direção da tradução, categoria e nível (dentro da categoria) escolhidos
+  // na tela inicial. category/level vazios ou ausentes = todas as categorias,
+  // sem progressão de nível (comportamento antigo).
+  const { mode, category, level } = useLocalSearchParams<{
+    mode?: string;
+    category?: string;
+    level?: string;
+  }>();
+  const categoryKey = (category || undefined) as CategoryKey | undefined;
+  const categoryInfo = categoryKey ? getCategoryInfo(categoryKey) : undefined;
+  const requestedLevel = level ? parseInt(Array.isArray(level) ? level[0] : level, 10) : undefined;
+  // Nível válido só quando há categoria + nível numérico + a categoria realmente tem níveis.
+  const activeLevel =
+    categoryInfo && requestedLevel && requestedLevel >= 1
+      ? Math.min(requestedLevel, categoryInfo.levels.length)
+      : undefined;
+
+  const words = useMemo(() => {
+    const pool =
+      categoryKey && activeLevel
+        ? getCategoryLevelWords(categoryKey, activeLevel)
+        : getWordsByCategory(categoryKey);
+    // As palavras do jogador vêm primeiro: se repetirem uma do banco, a dele vale.
+    return prepareWords([...customWords, ...pool], parseMode(mode));
+  }, [mode, categoryKey, activeLevel, customWords]);
+
+  const levelContext: LevelContext | undefined =
+    categoryKey && activeLevel && categoryInfo
+      ? { categoryKey, level: activeLevel, totalLevels: categoryInfo.levels.length }
+      : undefined;
+
+  // A Lexi aparece quando o jogador perde (tempo esgotado) ou tenta sair.
+  // Enquanto ela está na tela, o relógio fica parado.
+  const [lexi, setLexi] = useState<"timeup" | "broke" | "leave" | null>(null);
+
+  const game = useCrosswordGame(words, 6, levelContext, lexi !== null);
+
+  // Terminou o último nível da categoria (não há mais o que desbloquear).
+  const categoryCompleted = !!levelContext && levelContext.level >= levelContext.totalLevels;
+  // Acabou de liberar a próxima fase ao completar esta cruzadinha.
+  const justUnlockedNextLevel =
+    !!levelContext && game.unlockedLevel !== null && game.unlockedLevel > levelContext.level;
+
+  const goToNextLevel = useCallback(() => {
+    if (!levelContext || game.unlockedLevel === null) return;
+    router.replace({
+      pathname: "/game",
+      params: { mode, category: levelContext.categoryKey, level: String(game.unlockedLevel) }
+    });
+  }, [levelContext, game.unlockedLevel, router, mode]);
+
+  const goPickCategory = useCallback(() => router.replace("/"), [router]);
+
+  // Teclado do próprio celular: um TextInput invisível recebe o foco
+  // sempre que o jogador toca em uma célula ou em uma pista.
+  const inputRef = useRef<TextInput>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardVisible = useRef(false);
+  const lastTypedAt = useRef(0);
+  const reopening = useRef(false);
+
+  // Solta e devolve o foco. É o único jeito de o React Native reabrir o
+  // teclado quando ele ainda acha que o campo está focado.
+  const reopenKeyboard = useCallback(() => {
+    if (reopening.current) return;
+    reopening.current = true;
+    inputRef.current?.blur();
+    setTimeout(() => {
+      inputRef.current?.focus();
+      setTimeout(() => {
+        reopening.current = false;
+      }, 400);
+    }, 60);
+  }, []);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      if (DEBUG_KEYBOARD) console.log("[teclado] abriu");
+      keyboardVisible.current = true;
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      const sinceTyped = Date.now() - lastTypedAt.current;
+      if (DEBUG_KEYBOARD) console.log("[teclado] fechou", { sinceTyped, reopening: reopening.current });
+      keyboardVisible.current = false;
+      setKeyboardHeight(0);
+      // Sumiu logo depois de uma letra? Foi o teclado piscando (o campo é
+      // reposto a cada letra), não o jogador: reabre sozinho.
+      if (!reopening.current && sinceTyped < 600) reopenKeyboard();
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [reopenKeyboard]);
+
+  const openKeyboard = useCallback(() => {
+    const input = inputRef.current;
+    if (!input || keyboardVisible.current) return; // já está aberto
+    // Foco "preso" (ex.: o botão voltar fechou o teclado): precisa soltar antes.
+    if (input.isFocused()) reopenKeyboard();
+    else input.focus();
+  }, [reopenKeyboard]);
+
+  const { selectCell, selectWord, dismissLearnedWord, typeLetter, erase } = game;
+
+  const handleLetter = useCallback(
+    (letter: string) => {
+      lastTypedAt.current = Date.now();
+      typeLetter(letter);
+    },
+    [typeLetter]
+  );
+
+  const handleErase = useCallback(() => {
+    lastTypedAt.current = Date.now();
+    erase();
+  }, [erase]);
+
+  const handleSelectCell = useCallback(
+    (row: number, col: number) => {
+      selectCell(row, col);
+      openKeyboard();
+    },
+    [selectCell, openKeyboard]
+  );
+
+  const handleSelectWord = useCallback(
+    (word: PlacedWord) => {
+      selectWord(word);
+      openKeyboard();
+    },
+    [selectWord, openKeyboard]
+  );
+
+  const handleDismissLearned = useCallback(() => {
+    dismissLearnedWord();
+    // O Modal tira o foco do campo; devolve depois que ele fecha.
+    setTimeout(openKeyboard, 150);
+  }, [dismissLearnedWord, openKeyboard]);
+
+  // ---------- CELEBRAÇÕES ----------
+  const [finishBurst, setFinishBurst] = useState(0); // puzzle completo
+  const [levelBurst, setLevelBurst] = useState(0); // subiu de nível
+
+  // Avisos (nível, meta do dia...) entram numa fila e só aparecem depois que
+  // o card da palavra fecha, porque o Modal fica por cima da tela.
+  const [pendingToasts, setPendingToasts] = useState<Toast[]>([]);
+  const [toastQueue, setToastQueue] = useState<Toast[]>([]);
+  const toastCounter = useRef(0);
+  const notify = useCallback((title: string, subtitle: string) => {
+    toastCounter.current += 1;
+    const toast: Toast = { id: toastCounter.current, title, subtitle };
+    setPendingToasts(current => [...current, toast]);
+  }, []);
+
+  // Puzzle completo: espera o card da última palavra fechar (o Modal fica
+  // por cima da tela) e então solta o confete grande.
+  const celebratedPuzzle = useRef(false);
+  useEffect(() => {
+    if (game.complete && !game.learnedWord && !celebratedPuzzle.current) {
+      celebratedPuzzle.current = true;
+      setFinishBurst(n => n + 1);
+    }
+  }, [game.complete, game.learnedWord]);
+
+  // Ao completar uma palavra, fala ela em inglês automaticamente (o card
+  // também tem um botão 🔊 pra ouvir de novo). Pequeno atraso pra não
+  // atropelar o som de acerto que acabou de tocar.
+  useEffect(() => {
+    if (!game.learnedWord) return;
+    const english = game.learnedWord.english ?? game.learnedWord.answer;
+    const id = setTimeout(() => speakEnglish(english), 350);
+    return () => clearTimeout(id);
+  }, [game.learnedWord]);
+
+  // Subiu de nível. Enquanto nenhuma palavra foi concluída, só guardamos o
+  // nível carregado do aparelho (evita "level up" falso ao abrir o app).
+  const levelBaseline = useRef(game.level);
+  useEffect(() => {
+    if (game.completedWordIds.size === 0) {
+      levelBaseline.current = game.level;
+      return;
+    }
+    if (game.level > levelBaseline.current) {
+      levelBaseline.current = game.level;
+      notify("🎉 SUBIU DE NÍVEL!", `Você chegou ao nível ${game.level}`);
+    }
+  }, [game.level, game.completedWordIds.size]);
+
+  // Meta do dia cumprida: aviso + confete.
+  useEffect(() => {
+    if (game.goalEvent === 0) return;
+    const dias = game.streak === 1 ? "dia" : "dias";
+    notify(
+      "🔥 META DO DIA CUMPRIDA!",
+      `Sequência: ${game.streak} ${dias}  ·  +${game.dailyGoalCoins} 🪙`
+    );
+  }, [game.goalEvent]);
+
+  // Próxima fase da categoria liberada: aviso + confete.
+  useEffect(() => {
+    if (game.levelUnlockEvent === 0 || !levelContext) return;
+    notify(
+      "🔓 PRÓXIMA FASE LIBERADA!",
+      `${categoryInfo?.label ?? "Categoria"} · Fase ${game.unlockedLevel} de ${levelContext.totalLevels}`
+    );
+  }, [game.levelUnlockEvent]);
+
+  // Tempo esgotado, mas o jogador tinha moedas: a cruzadinha foi reembaralhada.
+  useEffect(() => {
+    if (game.timeUpEvent === 0) return;
+    setLexi("timeup");
+  }, [game.timeUpEvent]);
+
+  // Tempo esgotado e sem moedas pra pagar a reembaralhada: a Lexi avisa e
+  // o botão leva o jogador de volta ao início.
+  useEffect(() => {
+    if (game.sentHomeEvent === 0) return;
+    setLexi("broke");
+  }, [game.sentHomeEvent]);
+
+  // Saída: botão ‹ do cabeçalho e botão "voltar" do Android. Cruzadinha já
+  // completa sai direto; no meio do jogo, a Lexi pergunta antes.
+  const askLeave = useCallback(() => {
+    if (game.complete) {
+      router.back();
+      return;
+    }
+    setLexi("leave");
+  }, [game.complete, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (game.complete) return false;
+      setLexi("leave");
+      return true;
+    });
+    return () => sub.remove();
+  }, [game.complete]);
+
+
+  // Libera os avisos guardados quando o card da palavra não está na tela.
+  useEffect(() => {
+    if (pendingToasts.length > 0 && !game.learnedWord) {
+      setToastQueue(queue => [...queue, ...pendingToasts]);
+      setPendingToasts([]);
+      setLevelBurst(n => n + 1);
+    }
+  }, [pendingToasts, game.learnedWord]);
+
+  const nextToast = useCallback(() => setToastQueue(queue => queue.slice(1)), []);
+
+  // Ao completar, volta ao topo para mostrar o cartão de parabéns.
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (game.complete) scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [game.complete]);
+
+  return (
+    <View style={styles.container}>
+      {/* No iOS, o gesto de arrastar para voltar pularia a Lexi: só vale depois de completar */}
+      <Stack.Screen options={{ gestureEnabled: game.complete }} />
+
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.headerButton}
+          onPress={askLeave}
+        >
+          <Text style={styles.back}>‹</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.level}>
+            NÍVEL {game.level}
+          </Text>
+
+          <Text style={styles.xp}>
+            ⭐ {game.xp} XP
+            {"  ·  "}
+            🪙 {game.coins}
+          </Text>
+
+          <Text
+            style={[
+              styles.clock,
+              game.timeLeft <= 30 && styles.clockUrgent,
+              game.timeLeft <= 10 && styles.clockCritical
+            ]}
+          >
+            ⏱ {formatClock(game.timeLeft)}
+          </Text>
+
+          <Text style={styles.daily}>
+            🔥 {game.streak}
+            {"  ·  "}
+            {game.goalDone
+              ? "✅ meta do dia"
+              : `🎯 ${Math.min(game.dailyWords, game.dailyGoal)}/${game.dailyGoal} hoje`}
+          </Text>
+
+          {levelContext && categoryInfo && (
+            <Text style={styles.categoryBadge}>
+              {categoryInfo.label} · Fase {levelContext.level}/{levelContext.totalLevels}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 30 + keyboardHeight }
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* COMPLETE */}
+        {game.complete && (
+          <>
+          <CatWave size={220} />
+          <View style={styles.completeBox}>
+            <Text style={styles.completeEmoji}>
+              {categoryCompleted ? "🏆" : "🎉"}
+            </Text>
+
+            <View>
+              <Text style={styles.complete}>
+                {categoryCompleted ? "CATEGORIA COMPLETA!" : "CRUZADINHA COMPLETA!"}
+              </Text>
+
+              <Text style={styles.completeSubtext}>
+                {categoryCompleted
+                  ? `Você terminou todas as fases de ${categoryInfo?.label ?? "categoria"}.`
+                  : "Parabéns! Você completou a cruzadinha."}
+              </Text>
+            </View>
+          </View>
+
+          {justUnlockedNextLevel ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.nextButton}
+              onPress={goToNextLevel}
+            >
+              <Text style={styles.nextText}>▶ FASE {game.unlockedLevel} — JOGAR</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.nextButton}
+              onPress={onNextRound}
+            >
+              <Text style={styles.nextText}>▶ PRÓXIMA CRUZADINHA</Text>
+            </TouchableOpacity>
+          )}
+
+          {categoryCompleted && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.secondary}
+              onPress={goPickCategory}
+            >
+              <Text style={styles.secondaryText}>ESCOLHER OUTRA CATEGORIA</Text>
+            </TouchableOpacity>
+          )}
+          </>
+        )}
+
+        {/* ACTIVE CLUE */}
+        {!game.complete && game.activeWord && (
+          <View style={styles.activeClue}>
+            <View style={styles.activeClueHeader}>
+              <Text
+                style={styles.activeClueDirection}
+              >
+                {game.activeWord.number}.
+                {" "}
+                {game.activeWord.direction === "across" ? "HORIZONTAL" : "VERTICAL"}
+              </Text>
+
+              <Text style={styles.activeClueHint}>
+                {game.activeWord.answer.length} letras
+                {"  ·  "}
+                {game.activeWord.clueLang === "pt" ? "🇧🇷 → 🇺🇸" : "🇺🇸 → 🇧🇷"}
+              </Text>
+            </View>
+
+            <View style={styles.activeClueRow}>
+              <Text style={[styles.activeClueText, styles.activeClueTextFlex]}>
+                {game.activeWord.clue}
+              </Text>
+
+              {/* Só quando a pista é em inglês: ouvir não entrega a resposta. */}
+              {game.activeWord.clueLang === "en" && (
+                <TouchableOpacity
+                  accessibilityLabel="Ouvir pronúncia"
+                  activeOpacity={0.7}
+                  hitSlop={10}
+                  style={styles.speakButton}
+                  onPress={() => speakEnglish(game.activeWord?.clue ?? "")}
+                >
+                  <Text style={styles.speakIcon}>🔊</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* GRID */}
+        <View style={styles.gridContainer}>
+          <CrosswordGrid
+            grid={game.grid}
+            selected={game.selected}
+            highlightedCells={game.activeWordCells}
+            onSelect={handleSelectCell}
+          />
+        </View>
+
+        {/* BOTÃO DE DICA: gasta moedas e fica bloqueado sem saldo */}
+        {!game.complete && (
+          <>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={!game.canReveal}
+              style={[
+                styles.revealButton,
+                !game.canReveal && styles.revealButtonDisabled
+              ]}
+              onPress={game.revealNext}
+            >
+              <View>
+                <Text
+                  style={[
+                    styles.revealText,
+                    !game.canReveal && styles.revealTextDisabled
+                  ]}
+                >
+                  💡 REVELAR PRÓXIMA LETRA
+                </Text>
+
+                <Text style={styles.revealCount}>
+                  {game.lettersLeft === 1 ? "falta 1 letra" : `faltam ${game.lettersLeft} letras`}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.revealCost,
+                  !game.canReveal && styles.revealTextDisabled
+                ]}
+              >
+                🪙 {game.revealCost}
+              </Text>
+            </TouchableOpacity>
+
+            {!game.canReveal && (
+              <Text style={styles.revealHint}>
+                Você precisa de {game.revealCost} 🪙 para uma dica. Complete palavras para ganhar moedas.
+              </Text>
+            )}
+          </>
+        )}
+
+        {/* CLUES */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            PALAVRA A SER TRADUZIDA
+          </Text>
+
+          <ClueList
+            words={game.words}
+            activeWordId={game.activeWord?.id}
+            completedWordIds={game.completedWordIds}
+            onSelectWord={handleSelectWord}
+          />
+        </View>
+
+      </ScrollView>
+
+      {/* TECLADO DO CELULAR (campo invisível) */}
+      {!game.complete && (
+        <HiddenKeyboardInput
+          ref={inputRef}
+          onLetter={handleLetter}
+          onErase={handleErase}
+        />
+      )}
+
+      {/* WORD LEARNED MODAL */}
+      <WordLearnedCard
+        word={game.learnedWord}
+        onDismiss={handleDismissLearned}
+      />
+
+      {/* A LEXI: derrota e saída */}
+      <LexiModal
+        visible={lexi === "timeup"}
+        title="Tempo esgotado!"
+        message={`A cruzadinha foi reembaralhada e custou ${game.timeoutCost} 🪙. A Lexi acredita em você!`}
+        primary={{ label: "TENTAR DE NOVO", onPress: () => setLexi(null) }}
+        onRequestClose={() => setLexi(null)}
+      />
+      <LexiModal
+        visible={lexi === "broke"}
+        title="Tempo esgotado!"
+        message={`Você não tem ${game.timeoutCost} 🪙 pra tentar de novo. Volte quando tiver moedas.`}
+        primary={{ label: "VOLTAR AO INÍCIO", onPress: () => router.replace("/") }}
+        onRequestClose={() => router.replace("/")}
+      />
+      <LexiModal
+        visible={lexi === "leave"}
+        art={<CatSad size={200} />}
+        title="Já vai embora?"
+        message="Sua cruzadinha atual vai ser perdida. O gatinho vai sentir sua falta!"
+        primary={{ label: "CONTINUAR JOGANDO", onPress: () => setLexi(null) }}
+        secondary={{ label: "Sair mesmo assim", onPress: () => router.back() }}
+        onRequestClose={() => setLexi(null)}
+      />
+
+      {/* CONFETES E AVISOS (por cima de tudo, não bloqueiam toques) */}
+      <Confetti burstKey={finishBurst} mode="burst" count={70} />
+      <Confetti burstKey={finishBurst} mode="rain" count={60} />
+      <Confetti
+        burstKey={levelBurst}
+        mode="burst"
+        count={40}
+        origins={[{ x: 0.5, y: 0.12, aim: 90, spread: 140 }]}
+      />
+      <AchievementToast toast={toastQueue[0] ?? null} onDone={nextToast} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#101522"
+  },
+
+  header: {
+    paddingTop: 58,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#182033",
+    borderBottomWidth: 1,
+    borderBottomColor: "#26324a"
+  },
+
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#26324a"
+  },
+
+  back: {
+    color: "#ffffff",
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: "300"
+  },
+
+  headerCenter: {
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  level: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 0.5
+  },
+
+  xp: {
+    color: "#facc15",
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 4
+  },
+
+  hint: {
+    fontSize: 22
+  },
+
+  hintDisabled: {
+    opacity: 0.3
+  },
+
+  content: {
+    padding: 18,
+    paddingBottom: 30,
+    alignItems: "center"
+  },
+
+  completeBox: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#052e16",
+    borderWidth: 1,
+    borderColor: "#166534",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 18
+  },
+
+  completeEmoji: {
+    fontSize: 28,
+    marginRight: 12
+  },
+
+  complete: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: "#22c55e"
+  },
+
+  completeSubtext: {
+    color: "#bbf7d0",
+    fontSize: 12,
+    marginTop: 3
+  },
+
+  activeClue: {
+    width: "100%",
+    backgroundColor: "#182033",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#26324a"
+  },
+
+  activeClueHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 5
+  },
+
+  activeClueDirection: {
+    color: "#7dd3fc",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1
+  },
+
+  activeClueHint: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: "700"
+  },
+
+  daily: {
+    color: "#fb923c",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
+  categoryBadge: {
+    color: "#7dd3fc",
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
+  clock: {
+    color: "#94a3b8",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 2
+  },
+
+  clockUrgent: {
+    color: "#fb923c"
+  },
+
+  clockCritical: {
+    color: "#f87171"
+  },
+
+  activeClueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+
+  activeClueTextFlex: {
+    flex: 1
+  },
+
+  speakButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#26324a",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  speakIcon: {
+    fontSize: 19
+  },
+
+  activeClueText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 15,
+    lineHeight: 21
+  },
+
+  gridContainer: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  revealButton: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#182033",
+    borderWidth: 1,
+    borderColor: "#facc15",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20
+  },
+
+  revealText: {
+    color: "#facc15",
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 0.5
+  },
+
+  revealCount: {
+    color: "#94a3b8",
+    fontWeight: "800",
+    fontSize: 12
+  },
+
+  headerSpacer: {
+    width: 44,
+    height: 44
+  },
+
+  revealButtonDisabled: {
+    borderColor: "#334155",
+    opacity: 0.7
+  },
+
+  revealTextDisabled: {
+    color: "#64748b"
+  },
+
+  revealCost: {
+    color: "#facc15",
+    fontWeight: "900",
+    fontSize: 16
+  },
+
+  revealHint: {
+    color: "#94a3b8",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: -10,
+    marginBottom: 20
+  },
+
+  nextButton: {
+    width: "100%",
+    backgroundColor: "#22c55e",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  nextText: {
+    color: "#052e16",
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 0.5
+  },
+
+  secondary: {
+    borderWidth: 1,
+    borderColor: "#334155",
+    paddingVertical: 14,
+    borderRadius: 14,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  secondaryText: {
+    fontWeight: "800",
+    color: "#e2e8f0",
+    fontSize: 13,
+    letterSpacing: 0.5
+  },
+
+  section: {
+    width: "100%",
+    marginBottom: 8
+  },
+  sectionTitle: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginBottom: 8
+  },
+});
